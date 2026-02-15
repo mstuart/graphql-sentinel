@@ -40,7 +40,8 @@ export const depthLimitCheck: SecurityCheck = {
         body: JSON.stringify({ query }),
       });
 
-      const body = await response.json();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const body: any = await response.json();
       const hasErrors = body?.errors?.length > 0;
       const depthError = body?.errors?.some(
         (e: { message: string }) =>

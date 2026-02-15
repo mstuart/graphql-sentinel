@@ -18,7 +18,8 @@ export const batchAttackCheck: SecurityCheck = {
         body: JSON.stringify(batchPayload),
       });
 
-      const body = await response.json();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const body: any = await response.json();
       const isBatchResponse = Array.isArray(body) && body.length === 10;
 
       return {

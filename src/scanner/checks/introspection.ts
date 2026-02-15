@@ -17,7 +17,8 @@ export const introspectionCheck: SecurityCheck = {
         body: JSON.stringify({ query }),
       });
 
-      const body = await response.json();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const body: any = await response.json();
       const hasSchema = body?.data?.__schema?.types?.length > 0;
 
       return {
