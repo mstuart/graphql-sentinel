@@ -1,2 +1,12 @@
 #!/usr/bin/env node
-console.log('graphql-sentinel CLI - coming soon');
+import { Command } from 'commander';
+import { createScanCommand } from './cli/scan.js';
+
+const program = new Command()
+  .name('graphql-sentinel')
+  .description('GraphQL security scanner and runtime shield')
+  .version('0.1.0');
+
+program.addCommand(createScanCommand());
+
+program.parse();
