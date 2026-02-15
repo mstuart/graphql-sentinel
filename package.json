@@ -43,11 +43,17 @@
     "type": "git",
     "url": "https://github.com/mstuart/graphql-sentinel.git"
   },
+  "homepage": "https://github.com/mstuart/graphql-sentinel#readme",
+  "bugs": {
+    "url": "https://github.com/mstuart/graphql-sentinel/issues"
+  },
   "engines": {
     "node": ">=18.0.0"
   },
   "peerDependencies": {
-    "graphql": "^16.12.0"
+    "graphql": "^16.12.0",
+    "graphql-yoga": "^5.0.0",
+    "@apollo/server": "^4.0.0"
   },
   "peerDependenciesMeta": {
     "graphql-yoga": {
