@@ -37,8 +37,8 @@ export function createScanCommand(): Command {
       const checks = options.checks ? options.checks.split(',').map((c) => c.trim()) : undefined;
       const format = options.format as ReportFormat;
 
-      if (!['terminal', 'json', 'html', 'sarif'].includes(format)) {
-        console.error(`Invalid format "${format}". Use: terminal, json, html, sarif`);
+      if (!['terminal', 'json', 'html', 'sarif', 'dashboard'].includes(format)) {
+        console.error(`Invalid format "${format}". Use: terminal, json, html, sarif, dashboard`);
         process.exit(1);
       }
 

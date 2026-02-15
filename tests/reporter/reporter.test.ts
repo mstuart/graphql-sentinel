@@ -5,6 +5,7 @@ import { generateJsonReport } from '../../src/reporter/json.js';
 import { generateTerminalReport } from '../../src/reporter/terminal.js';
 import { generateHtmlReport } from '../../src/reporter/html.js';
 import { generateSarifReport } from '../../src/reporter/sarif.js';
+import { generateDashboard, calculatePostureScore } from '../../src/reporter/dashboard.js';
 
 const mockReport: ScanReport = {
   target: 'http://localhost:4000/graphql',
@@ -239,5 +240,134 @@ describe('SARIF Reporter', () => {
     const parsed = JSON.parse(output);
     expect(parsed.runs[0].results).toHaveLength(0);
     expect(parsed.runs[0].tool.driver.rules).toHaveLength(1);
+  });
+});
+
+describe('Dashboard Reporter', () => {
+  it('should generate valid HTML', () => {
+    const output = generateDashboard([mockReport]);
+    expect(output).toContain('<!DOCTYPE html>');
+    expect(output).toContain('</html>');
+    expect(output).toContain('Security Dashboard');
+  });
+
+  it('should include security posture score', () => {
+    const output = generateDashboard([mockReport]);
+    const score = calculatePostureScore(mockReport.results);
+    expect(output).toContain(`>${score}<`);
+    expect(output).toContain('Security Posture');
+  });
+
+  it('should include executive summary', () => {
+    const output = generateDashboard([mockReport]);
+    expect(output).toContain('Executive Summary');
+    expect(output).toContain('localhost:4000');
+  });
+
+  it('should include category breakdown', () => {
+    const output = generateDashboard([mockReport]);
+    expect(output).toContain('Category Breakdown');
+    expect(output).toContain('Information Disclosure');
+    expect(output).toContain('Authorization');
+  });
+
+  it('should include check details with expandable sections', () => {
+    const output = generateDashboard([mockReport]);
+    expect(output).toContain('Check Details');
+    expect(output).toContain('Introspection Enabled');
+    expect(output).toContain('No Query Depth Limit');
+    expect(output).toContain('toggleCheck');
+  });
+
+  it('should include remediation for failed checks', () => {
+    const output = generateDashboard([mockReport]);
+    expect(output).toContain('Remediation');
+    expect(output).toContain('Disable introspection');
+  });
+
+  it('should have dark theme styling', () => {
+    const output = generateDashboard([mockReport]);
+    expect(output).toContain('background:#0f172a');
+    expect(output).toContain('color:#e2e8f0');
+  });
+
+  it('should include inline CSS with no external dependencies', () => {
+    const output = generateDashboard([mockReport]);
+    expect(output).toContain('<style>');
+    expect(output).not.toContain('href="http');
+    expect(output).not.toContain('src="http');
+  });
+
+  it('should include localStorage persistence script', () => {
+    const output = generateDashboard([mockReport]);
+    expect(output).toContain('localStorage');
+    expect(output).toContain('graphql-sentinel-history');
+  });
+
+  it('should support custom title', () => {
+    const output = generateDashboard([mockReport], { title: 'My API Security' });
+    expect(output).toContain('My API Security');
+  });
+
+  it('should handle empty reports array', () => {
+    const output = generateDashboard([]);
+    expect(output).toContain('No reports provided');
+  });
+});
+
+describe('calculatePostureScore', () => {
+  it('should return 100 for all passed checks', () => {
+    const results = [
+      { ...mockReport.results[2] }, // passed
+    ];
+    expect(calculatePostureScore(results)).toBe(100);
+  });
+
+  it('should return 0 for all failed critical checks', () => {
+    const results = [
+      { ...mockReport.results[0], severity: 'critical' as const, passed: false },
+    ];
+    expect(calculatePostureScore(results)).toBe(0);
+  });
+
+  it('should return 100 for empty results', () => {
+    expect(calculatePostureScore([])).toBe(100);
+  });
+
+  it('should weight severity correctly', () => {
+    // One high failed, one low passed
+    const results = [
+      { ...mockReport.results[0], severity: 'high' as const, passed: false },
+      { ...mockReport.results[2], severity: 'low' as const, passed: true },
+    ];
+    const score = calculatePostureScore(results);
+    // high weight = 20, low weight = 5, total = 25, failed = 20
+    // score = ((25-20)/25)*100 = 20
+    expect(score).toBe(20);
+  });
+
+  it('should generate timeline SVG for multiple reports', () => {
+    const report2: ScanReport = {
+      ...mockReport,
+      timestamp: '2024-02-15T10:30:00.000Z',
+      summary: { ...mockReport.summary, passed: 2, failed: 1 },
+    };
+    const output = generateDashboard([mockReport, report2]);
+    expect(output).toContain('Vulnerability Timeline');
+    expect(output).toContain('<svg');
+    expect(output).toContain('viewBox');
+  });
+
+  it('should not render timeline for single report', () => {
+    const output = generateDashboard([mockReport]);
+    expect(output).not.toContain('Vulnerability Timeline');
+  });
+});
+
+describe('generateReport with dashboard', () => {
+  it('should route to dashboard formatter', () => {
+    const output = generateReport(mockReport, 'dashboard');
+    expect(output).toContain('<!DOCTYPE html>');
+    expect(output).toContain('Security Dashboard');
   });
 });
