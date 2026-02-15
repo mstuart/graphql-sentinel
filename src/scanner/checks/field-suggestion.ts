@@ -17,7 +17,8 @@ export const fieldSuggestionCheck: SecurityCheck = {
         body: JSON.stringify({ query }),
       });
 
-      const body = await response.json();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const body: any = await response.json();
       const errorMessages = (body?.errors || [])
         .map((e: { message: string }) => e.message)
         .join(' ');

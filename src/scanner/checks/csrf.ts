@@ -17,7 +17,8 @@ export const csrfCheck: SecurityCheck = {
         },
       });
 
-      const body = await response.json();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const body: any = await response.json();
       const hasData = body?.data?.__typename !== undefined;
 
       return {
