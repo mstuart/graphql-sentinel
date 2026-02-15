@@ -1,21 +1,5 @@
 import type { SecurityCheck, ScanResult } from '../../types/index.js';
 
-function buildDeepQuery(depth: number): string {
-  let query = '{ ';
-  for (let i = 0; i < depth; i++) {
-    query += '__typename ';
-    if (i < depth - 1) {
-      query += `d${i}: __type(name: "Query") { name fields { name type { name fields { name `;
-    }
-  }
-  // Close all opened braces
-  for (let i = 0; i < depth - 1; i++) {
-    query += '} } } } ';
-  }
-  query += '}';
-  return query;
-}
-
 export const depthLimitCheck: SecurityCheck = {
   name: 'depth-limit',
   severity: 'high',
@@ -23,7 +7,6 @@ export const depthLimitCheck: SecurityCheck = {
   async run(endpoint: string, headers?: Record<string, string>): Promise<ScanResult> {
     // Build a deeply nested query using __type introspection which naturally allows nesting
     const depth = 20;
-    const nestedParts: string[] = [];
     let current = '__typename';
     for (let i = depth; i >= 0; i--) {
       current = `d${i}: __type(name: "Query") { ${current} }`;
@@ -40,7 +23,7 @@ export const depthLimitCheck: SecurityCheck = {
         body: JSON.stringify({ query }),
       });
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+       
       const body: any = await response.json();
       const hasErrors = body?.errors?.length > 0;
       const depthError = body?.errors?.some(

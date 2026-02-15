@@ -26,8 +26,6 @@ export function createFieldAuthRule(config: FieldAuthConfig) {
       OperationDefinition: {
         enter() {
           const queryType = context.getSchema().getQueryType();
-          const mutationType = context.getSchema().getMutationType();
-          const subscriptionType = context.getSchema().getSubscriptionType();
           // Push root type
           typeStack.push(queryType?.name || 'Query');
         },
@@ -143,7 +141,7 @@ function checkRule(
   }
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 function getNamedType(type: any): any {
   if (!type) return null;
   if (type.ofType) return getNamedType(type.ofType);
