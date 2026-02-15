@@ -4,6 +4,7 @@ import { createComplexityRule } from './complexity-analyzer.js';
 import { createAliasLimitRule } from './alias-limiter.js';
 import { createIntrospectionControlRule } from './introspection-control.js';
 import { createRateLimiter } from './rate-limiter.js';
+import { createFieldAuthRule } from './field-auth.js';
 
 type ValidationRule = (context: import('graphql').ValidationContext) => import('graphql').ASTVisitor;
 
@@ -35,6 +36,10 @@ export function createShield(config: ShieldConfig): Shield {
     validationRules.push(createIntrospectionControlRule());
   }
 
+  if (config.fieldAuth) {
+    validationRules.push(createFieldAuthRule(config.fieldAuth));
+  }
+
   let rateLimiter: ReturnType<typeof createRateLimiter> | undefined;
   if (config.rateLimit) {
     rateLimiter = createRateLimiter(config.rateLimit);
@@ -48,3 +53,4 @@ export { createComplexityRule } from './complexity-analyzer.js';
 export { createAliasLimitRule } from './alias-limiter.js';
 export { createIntrospectionControlRule } from './introspection-control.js';
 export { createRateLimiter } from './rate-limiter.js';
+export { createFieldAuthRule } from './field-auth.js';
