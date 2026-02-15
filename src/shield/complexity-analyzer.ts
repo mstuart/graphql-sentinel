@@ -20,7 +20,7 @@ export function createComplexityRule(config: ComplexityConfig = {}) {
 
     return {
       Field: {
-        enter(node) {
+        enter(_node) {
           const currentMultiplier = multiplierStack[multiplierStack.length - 1] || 1;
           complexity += defaultFieldCost * currentMultiplier;
 

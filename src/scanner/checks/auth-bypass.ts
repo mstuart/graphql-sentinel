@@ -15,18 +15,18 @@ const INTROSPECTION_QUERY = `{
 }`;
 
 function findFirstQueryField(schemaData: Record<string, unknown>): string | null {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   const types = (schemaData as any)?.__schema?.types;
   if (!Array.isArray(types)) return null;
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   const queryTypeName = (schemaData as any)?.__schema?.queryType?.name || 'Query';
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   const queryType = types.find((t: any) => t.name === queryTypeName);
   if (!queryType?.fields || !Array.isArray(queryType.fields)) return null;
 
   // Find a field that returns a scalar or simple type (not introspection)
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   for (const field of queryType.fields as any[]) {
     if (field.name.startsWith('__')) continue;
     return field.name;
@@ -50,7 +50,7 @@ async function sendQuery(
       body: JSON.stringify({ query }),
     });
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     const body: any = await response.json();
     return { status: response.status, body };
   } catch {
@@ -62,7 +62,7 @@ function isAuthError(body: Record<string, unknown> | null, status: number): bool
   if (status === 401 || status === 403) return true;
   if (!body) return false;
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   const errors = (body as any)?.errors;
   if (!Array.isArray(errors)) return false;
 
@@ -87,7 +87,7 @@ function isAuthError(body: Record<string, unknown> | null, status: number): bool
 
 function hasData(body: Record<string, unknown> | null): boolean {
   if (!body) return false;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   const data = (body as any)?.data;
   if (data === null || data === undefined) return false;
   // Check if data has any non-null values
@@ -107,7 +107,7 @@ export const authBypassCheck: SecurityCheck = {
       const introResult = await sendQuery(endpoint, INTROSPECTION_QUERY, headers);
       let testField: string | null = null;
       if (introResult.body && hasData(introResult.body)) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+         
         testField = findFirstQueryField((introResult.body as any).data);
       }
 
@@ -134,16 +134,8 @@ export const authBypassCheck: SecurityCheck = {
       const invalidTokenHasData = hasData(invalidTokenResult.body);
 
       // Step 5: If auth headers were provided, compare with authenticated response
-      let authRequired = false;
       if (headers && (headers['Authorization'] || headers['authorization'])) {
-        const authResult = await sendQuery(endpoint, testQuery, headers);
-        const authHasData = hasData(authResult.body);
-
-        // If authenticated gets data but unauthenticated also gets data, may be public
-        // If authenticated gets data but unauthenticated doesn't, auth is working
-        if (authHasData && !noAuthHasData) {
-          authRequired = true;
-        }
+        await sendQuery(endpoint, testQuery, headers);
       }
 
       // Analysis
