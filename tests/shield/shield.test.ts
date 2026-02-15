@@ -13,6 +13,7 @@ import { createComplexityRule } from '../../src/shield/complexity-analyzer.js';
 import { createAliasLimitRule } from '../../src/shield/alias-limiter.js';
 import { createIntrospectionControlRule } from '../../src/shield/introspection-control.js';
 import { createRateLimiter } from '../../src/shield/rate-limiter.js';
+import { createFieldAuthRule } from '../../src/shield/field-auth.js';
 import { createShield } from '../../src/shield/index.js';
 
 // Create a test schema
@@ -238,5 +239,154 @@ describe('createShield', () => {
 
     expect(shield.validationRules).toHaveLength(0);
     expect(shield.rateLimiter).toBeUndefined();
+  });
+
+  it('should include field auth rule when configured', () => {
+    const shield = createShield({
+      fieldAuth: {
+        rules: {
+          'Query.user': { requireAuth: true },
+        },
+      },
+    });
+
+    expect(shield.validationRules).toHaveLength(1);
+  });
+});
+
+describe('Field Auth Rule', () => {
+  it('should block access to fields requiring auth when not authenticated', () => {
+    const rule = createFieldAuthRule({
+      rules: {
+        'Query.user': { requireAuth: true },
+      },
+      extractContext: () => null,
+    });
+
+    const query = parse('{ user(id: "1") { name } }');
+    const errors = validate(testSchema, query, [rule]);
+    expect(errors.length).toBeGreaterThan(0);
+    expect(errors[0].message).toContain('Access denied');
+    expect(errors[0].message).toContain('requires authentication');
+  });
+
+  it('should allow access to fields requiring auth when authenticated', () => {
+    const rule = createFieldAuthRule({
+      rules: {
+        'Query.user': { requireAuth: true },
+      },
+      extractContext: () => ({
+        authenticated: true,
+        roles: [],
+        permissions: [],
+      }),
+    });
+
+    const query = parse('{ user(id: "1") { name } }');
+    const errors = validate(testSchema, query, [rule]);
+    expect(errors).toHaveLength(0);
+  });
+
+  it('should block access when user lacks required role', () => {
+    const rule = createFieldAuthRule({
+      rules: {
+        'Query.users': { requireAuth: true, roles: ['admin'] },
+      },
+      extractContext: () => ({
+        authenticated: true,
+        roles: ['viewer'],
+        permissions: [],
+      }),
+    });
+
+    const query = parse('{ users { name } }');
+    const errors = validate(testSchema, query, [rule]);
+    expect(errors.length).toBeGreaterThan(0);
+    expect(errors[0].message).toContain('requires one of roles');
+    expect(errors[0].message).toContain('admin');
+  });
+
+  it('should allow access when user has required role', () => {
+    const rule = createFieldAuthRule({
+      rules: {
+        'Query.users': { requireAuth: true, roles: ['admin'] },
+      },
+      extractContext: () => ({
+        authenticated: true,
+        roles: ['admin', 'viewer'],
+        permissions: [],
+      }),
+    });
+
+    const query = parse('{ users { name } }');
+    const errors = validate(testSchema, query, [rule]);
+    expect(errors).toHaveLength(0);
+  });
+
+  it('should block access when user lacks required permission', () => {
+    const rule = createFieldAuthRule({
+      rules: {
+        'Query.user': {
+          requireAuth: true,
+          permissions: ['read:users'],
+        },
+      },
+      extractContext: () => ({
+        authenticated: true,
+        roles: [],
+        permissions: ['read:posts'],
+      }),
+    });
+
+    const query = parse('{ user(id: "1") { name } }');
+    const errors = validate(testSchema, query, [rule]);
+    expect(errors.length).toBeGreaterThan(0);
+    expect(errors[0].message).toContain('requires one of permissions');
+  });
+
+  it('should allow access when user has required permission', () => {
+    const rule = createFieldAuthRule({
+      rules: {
+        'Query.user': {
+          requireAuth: true,
+          permissions: ['read:users'],
+        },
+      },
+      extractContext: () => ({
+        authenticated: true,
+        roles: [],
+        permissions: ['read:users', 'write:users'],
+      }),
+    });
+
+    const query = parse('{ user(id: "1") { name } }');
+    const errors = validate(testSchema, query, [rule]);
+    expect(errors).toHaveLength(0);
+  });
+
+  it('should allow fields with no auth rules', () => {
+    const rule = createFieldAuthRule({
+      rules: {
+        'Query.user': { requireAuth: true },
+      },
+      extractContext: () => null,
+    });
+
+    const query = parse('{ hello }');
+    const errors = validate(testSchema, query, [rule]);
+    expect(errors).toHaveLength(0);
+  });
+
+  it('should work without extractContext (defaults to null)', () => {
+    const rule = createFieldAuthRule({
+      rules: {
+        'Query.hello': { requireAuth: true },
+      },
+    });
+
+    const query = parse('{ hello }');
+    const errors = validate(testSchema, query, [rule]);
+    expect(errors.length).toBeGreaterThan(0);
+    expect(errors[0].message).toContain('Access denied');
   });
 });
