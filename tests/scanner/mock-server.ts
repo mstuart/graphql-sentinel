@@ -7,6 +7,8 @@ export interface MockServerOptions {
   fieldSuggestionsEnabled?: boolean;
   aliasLimitEnabled?: boolean;
   getQueriesEnabled?: boolean;
+  authRequired?: boolean;
+  validToken?: string;
 }
 
 export function createMockGraphQLServer(
@@ -19,10 +21,22 @@ export function createMockGraphQLServer(
     fieldSuggestionsEnabled = true,
     aliasLimitEnabled = false,
     getQueriesEnabled = true,
+    authRequired = false,
+    validToken,
   } = options;
 
   const server = http.createServer((req, res) => {
     const url = new URL(req.url || '/', `http://localhost`);
+
+    // Auth check helper
+    const checkAuth = (): boolean => {
+      if (!authRequired) return true;
+      const authHeader = req.headers['authorization'];
+      if (!authHeader) return false;
+      if (validToken && authHeader === `Bearer ${validToken}`) return true;
+      if (!validToken && authHeader && authHeader !== '' && authHeader !== 'Bearer invalid_token_sentinel_test') return true;
+      return false;
+    };
 
     // Handle GET requests
     if (req.method === 'GET') {
@@ -34,6 +48,11 @@ export function createMockGraphQLServer(
 
       const query = url.searchParams.get('query');
       if (query) {
+        if (!checkAuth()) {
+          res.writeHead(401, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ errors: [{ message: 'Unauthorized: authentication required' }] }));
+          return;
+        }
         const result = processQuery(query, options);
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify(result));
@@ -51,6 +70,13 @@ export function createMockGraphQLServer(
     req.on('data', (chunk) => (body += chunk));
     req.on('end', () => {
       try {
+        // Check auth for POST requests
+        if (!checkAuth()) {
+          res.writeHead(401, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ errors: [{ message: 'Unauthorized: authentication required' }] }));
+          return;
+        }
+
         const parsed = JSON.parse(body);
 
         // Handle batch requests

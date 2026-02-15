@@ -5,6 +5,7 @@ import { batchAttackCheck } from './batch-attack.js';
 import { fieldSuggestionCheck } from './field-suggestion.js';
 import { aliasOverloadingCheck } from './alias-overloading.js';
 import { csrfCheck } from './csrf.js';
+import { authBypassCheck } from './auth-bypass.js';
 
 export const allChecks: SecurityCheck[] = [
   introspectionCheck,
@@ -13,6 +14,7 @@ export const allChecks: SecurityCheck[] = [
   fieldSuggestionCheck,
   aliasOverloadingCheck,
   csrfCheck,
+  authBypassCheck,
 ];
 
 export function getChecks(names?: string[]): SecurityCheck[] {
@@ -29,4 +31,5 @@ export {
   fieldSuggestionCheck,
   aliasOverloadingCheck,
   csrfCheck,
+  authBypassCheck,
 };
