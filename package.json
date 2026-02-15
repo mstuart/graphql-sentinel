@@ -64,6 +64,7 @@
     "@typescript-eslint/eslint-plugin": "^8.55.0",
     "@typescript-eslint/parser": "^8.55.0",
     "eslint": "^9.39.2",
+    "graphql-yoga": "^5.18.0",
     "prettier": "^3.8.1",
     "tsup": "^8.5.1",
     "typescript": "^5.9.3",
