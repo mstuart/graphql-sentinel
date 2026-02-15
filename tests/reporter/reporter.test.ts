@@ -4,6 +4,7 @@ import { generateReport } from '../../src/reporter/index.js';
 import { generateJsonReport } from '../../src/reporter/json.js';
 import { generateTerminalReport } from '../../src/reporter/terminal.js';
 import { generateHtmlReport } from '../../src/reporter/html.js';
+import { generateSarifReport } from '../../src/reporter/sarif.js';
 
 const mockReport: ScanReport = {
   target: 'http://localhost:4000/graphql',
@@ -146,7 +147,97 @@ describe('generateReport', () => {
     expect(output).toContain('<!DOCTYPE html>');
   });
 
+  it('should route to SARIF formatter', () => {
+    const output = generateReport(mockReport, 'sarif');
+    const parsed = JSON.parse(output);
+    expect(parsed.version).toBe('2.1.0');
+  });
+
   it('should throw for unknown format', () => {
     expect(() => generateReport(mockReport, 'xml' as never)).toThrow('Unknown report format');
+  });
+});
+
+describe('SARIF Reporter', () => {
+  it('should generate valid SARIF JSON', () => {
+    const output = generateSarifReport(mockReport);
+    const parsed = JSON.parse(output);
+    expect(parsed.version).toBe('2.1.0');
+    expect(parsed.$schema).toContain('sarif-schema-2.1.0');
+  });
+
+  it('should include tool driver information', () => {
+    const output = generateSarifReport(mockReport);
+    const parsed = JSON.parse(output);
+    const driver = parsed.runs[0].tool.driver;
+    expect(driver.name).toBe('graphql-sentinel');
+    expect(driver.version).toBe('0.1.0');
+    expect(driver.informationUri).toContain('graphql-sentinel');
+  });
+
+  it('should include rules for all check results', () => {
+    const output = generateSarifReport(mockReport);
+    const parsed = JSON.parse(output);
+    const rules = parsed.runs[0].tool.driver.rules;
+    expect(rules).toHaveLength(3);
+    expect(rules[0].id).toBe('introspection');
+    expect(rules[1].id).toBe('depth-limit');
+  });
+
+  it('should only include failed results in results array', () => {
+    const output = generateSarifReport(mockReport);
+    const parsed = JSON.parse(output);
+    const results = parsed.runs[0].results;
+    // mockReport has 2 failed results (introspection and depth-limit)
+    expect(results).toHaveLength(2);
+    expect(results[0].ruleId).toBe('introspection');
+    expect(results[1].ruleId).toBe('depth-limit');
+  });
+
+  it('should map severity to SARIF levels correctly', () => {
+    const output = generateSarifReport(mockReport);
+    const parsed = JSON.parse(output);
+    const results = parsed.runs[0].results;
+    // introspection is medium -> warning
+    expect(results[0].level).toBe('warning');
+    // depth-limit is high -> error
+    expect(results[1].level).toBe('error');
+  });
+
+  it('should include location with target URI', () => {
+    const output = generateSarifReport(mockReport);
+    const parsed = JSON.parse(output);
+    const results = parsed.runs[0].results;
+    expect(results[0].locations[0].physicalLocation.artifactLocation.uri).toBe(
+      'http://localhost:4000/graphql',
+    );
+  });
+
+  it('should include remediation as fix descriptions', () => {
+    const output = generateSarifReport(mockReport);
+    const parsed = JSON.parse(output);
+    const results = parsed.runs[0].results;
+    expect(results[0].fixes).toBeDefined();
+    expect(results[0].fixes[0].description.text).toContain('Disable introspection');
+  });
+
+  it('should include security and graphql tags', () => {
+    const output = generateSarifReport(mockReport);
+    const parsed = JSON.parse(output);
+    const rules = parsed.runs[0].tool.driver.rules;
+    expect(rules[0].properties.tags).toContain('security');
+    expect(rules[0].properties.tags).toContain('graphql');
+  });
+
+  it('should handle report with no failures', () => {
+    const allPassedReport: ScanReport = {
+      ...mockReport,
+      results: [{ ...mockReport.results[2] }], // only the passing one
+      summary: { total: 1, passed: 1, failed: 0, bySeverity: { critical: 0, high: 0, medium: 0, low: 0, info: 0 } },
+    };
+    const output = generateSarifReport(allPassedReport);
+    const parsed = JSON.parse(output);
+    expect(parsed.runs[0].results).toHaveLength(0);
+    expect(parsed.runs[0].tool.driver.rules).toHaveLength(1);
   });
 });
