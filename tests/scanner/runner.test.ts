@@ -30,9 +30,9 @@ describe('Scanner Runner', () => {
     expect(report.target).toBe(url);
     expect(report.timestamp).toBeDefined();
     expect(report.duration).toBeGreaterThanOrEqual(0);
-    expect(report.results).toHaveLength(6);
-    expect(report.summary.total).toBe(6);
-    expect(report.summary.passed + report.summary.failed).toBe(6);
+    expect(report.results).toHaveLength(7);
+    expect(report.summary.total).toBe(7);
+    expect(report.summary.passed + report.summary.failed).toBe(7);
   });
 
   it('should filter checks by name', async () => {
