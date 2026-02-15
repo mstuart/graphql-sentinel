@@ -1,4 +1,4 @@
-import { validate, parse as gqlParse, type GraphQLSchema, type DocumentNode } from 'graphql';
+import { validate, type GraphQLSchema, type DocumentNode } from 'graphql';
 import type { ShieldConfig } from '../types/index.js';
 import { createShield } from '../shield/index.js';
 

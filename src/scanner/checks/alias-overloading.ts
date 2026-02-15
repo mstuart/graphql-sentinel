@@ -19,7 +19,7 @@ export const aliasOverloadingCheck: SecurityCheck = {
         body: JSON.stringify({ query }),
       });
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+       
       const body: any = await response.json();
       const hasData = body?.data !== undefined && body?.data !== null;
       const aliasKeys = hasData ? Object.keys(body.data) : [];

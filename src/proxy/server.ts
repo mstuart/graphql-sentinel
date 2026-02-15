@@ -1,5 +1,5 @@
 import http from 'node:http';
-import { parse, validate } from 'graphql';
+import { parse } from 'graphql';
 import type { ShieldConfig } from '../types/index.js';
 import { createShield } from '../shield/index.js';
 
@@ -186,7 +186,7 @@ export function createProxyServer(config: ProxyConfig): http.Server {
  */
 function validateWithRules(
   document: ReturnType<typeof parse>,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   rules: Array<(context: any) => any>,
 ): Array<{ message: string }> {
   const errors: Array<{ message: string }> = [];
@@ -222,7 +222,7 @@ function validateWithRules(
   return errors;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 function visitNode(node: any, visitor: any): void {
   if (!node || typeof node !== 'object') return;
 
