@@ -1,0 +1,98 @@
+name: 'GraphQL Sentinel Scan'
+description: 'Scan a GraphQL endpoint for security vulnerabilities'
+
+inputs:
+  endpoint:
+    description: 'GraphQL endpoint URL to scan'
+    required: true
+  format:
+    description: 'Output format (terminal, json, html, sarif)'
+    required: false
+    default: 'terminal'
+  checks:
+    description: 'Comma-separated list of checks to run'
+    required: false
+  fail-on-severity:
+    description: 'Minimum severity to fail the build (critical, high, medium, low)'
+    required: false
+    default: 'high'
+  headers:
+    description: 'Headers to include (format: "Key: Value", one per line)'
+    required: false
+  timeout:
+    description: 'Timeout per check in milliseconds'
+    required: false
+    default: '10000'
+
+outputs:
+  report:
+    description: 'Path to the generated report file'
+    value: ${{ steps.scan.outputs.report }}
+  passed:
+    description: 'Whether the scan passed'
+    value: ${{ steps.scan.outputs.passed }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+
+    - name: Run scan
+      id: scan
+      shell: bash
+      run: |
+        # Determine file extension based on format
+        FORMAT="${{ inputs.format }}"
+        case "$FORMAT" in
+          html) EXT="html" ;;
+          json) EXT="json" ;;
+          sarif) EXT="json" ;;
+          *) EXT="txt" ;;
+        esac
+        REPORT_FILE="sentinel-report.${EXT}"
+
+        # Build header arguments
+        HEADER_ARGS=""
+        if [ -n "${{ inputs.headers }}" ]; then
+          while IFS= read -r line; do
+            if [ -n "$line" ]; then
+              HEADER_ARGS="$HEADER_ARGS -H \"$line\""
+            fi
+          done <<< "${{ inputs.headers }}"
+        fi
+
+        # Build checks argument
+        CHECKS_ARG=""
+        if [ -n "${{ inputs.checks }}" ]; then
+          CHECKS_ARG="--checks ${{ inputs.checks }}"
+        fi
+
+        # Run the scan
+        set +e
+        eval npx graphql-sentinel@latest scan "${{ inputs.endpoint }}" \
+          --format "$FORMAT" \
+          --timeout "${{ inputs.timeout }}" \
+          --output "$REPORT_FILE" \
+          $CHECKS_ARG \
+          $HEADER_ARGS
+        SCAN_EXIT=$?
+        set -e
+
+        echo "report=${REPORT_FILE}" >> $GITHUB_OUTPUT
+
+        if [ $SCAN_EXIT -eq 0 ]; then
+          echo "passed=true" >> $GITHUB_OUTPUT
+        else
+          echo "passed=false" >> $GITHUB_OUTPUT
+          exit $SCAN_EXIT
+        fi
+
+    - name: Upload report artifact
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: sentinel-security-report
+        path: sentinel-report.*
