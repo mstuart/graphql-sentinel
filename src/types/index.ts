@@ -30,6 +30,23 @@ export interface ScannerConfig {
   timeout?: number;
 }
 
+export interface FieldAuthRule {
+  requireAuth: boolean;
+  roles?: string[];
+  permissions?: string[];
+}
+
+export interface FieldAuthConfig {
+  /** Map of TypeName.fieldName -> required roles/permissions */
+  rules: Record<string, FieldAuthRule>;
+  /** Function to extract user context from the GraphQL context */
+  extractContext?: (context: unknown) => {
+    authenticated: boolean;
+    roles: string[];
+    permissions: string[];
+  } | null;
+}
+
 export interface ShieldConfig {
   maxDepth?: number;
   maxComplexity?: number;
@@ -38,6 +55,7 @@ export interface ShieldConfig {
   disableIntrospection?: boolean;
   costLimit?: number;
   rateLimit?: { window: number; max: number };
+  fieldAuth?: FieldAuthConfig;
 }
 
 export interface SecurityCheck {
