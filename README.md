@@ -20,6 +20,16 @@ npx graphql-sentinel scan https://api.example.com/graphql
 npm install graphql-sentinel graphql
 ```
 
+## Requirements
+
+- Node.js >= 18.0.0
+- `graphql` >= 16.0.0 (peer dependency)
+- `graphql-yoga` >= 5.0.0 (optional, for Yoga plugin)
+- `@apollo/server` >= 4.0.0 (optional, for Apollo plugin)
+- TypeScript >= 5.0 (optional, for type definitions)
+
+Fully written in TypeScript with complete type exports for all public APIs.
+
 ## CLI Usage
 
 ### Scan an endpoint
@@ -453,6 +463,24 @@ const dashboard = generateDashboard([report], { title: 'Security Dashboard' });
 | `requireAuth` | `boolean` | Whether authentication is required |
 | `roles` | `string[]` | Required roles (any match grants access) |
 | `permissions` | `string[]` | Required permissions (any match grants access) |
+
+## Comparison with graphql-armor
+
+[graphql-armor](https://github.com/Escape-Technologies/graphql-armor) is an excellent runtime-only shield. graphql-sentinel provides a broader security toolkit:
+
+| Feature | graphql-sentinel | graphql-armor |
+|---------|-----------------|---------------|
+| Runtime shield (depth, complexity, aliases) | Yes | Yes |
+| Security scanner (7 automated checks) | Yes | No |
+| CLI for CI/CD pipelines | Yes | No |
+| SARIF reports for GitHub Security tab | Yes | No |
+| Interactive security dashboard | Yes | No |
+| Reverse proxy mode | Yes | No |
+| Reusable GitHub Action | Yes | No |
+| Field-level authorization | Yes | No |
+| Express middleware | Yes | No |
+
+Choose graphql-armor if you only need runtime protection. Choose graphql-sentinel if you also want scanning, reporting, CI integration, or proxy deployment.
 
 ## API Reference
 

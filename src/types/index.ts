@@ -51,7 +51,6 @@ export interface ShieldConfig {
   maxDepth?: number;
   maxComplexity?: number;
   maxAliases?: number;
-  maxDirectives?: number;
   disableIntrospection?: boolean;
   costLimit?: number;
   rateLimit?: { window: number; max: number };
