@@ -24,3 +24,5 @@ export type {
   FieldAuthRule,
 } from './types/index.js';
 export type { ProxyConfig } from './proxy/server.js';
+export type { ComplexityConfig } from './shield/complexity-analyzer.js';
+export type { RateLimitConfig } from './shield/rate-limiter.js';
