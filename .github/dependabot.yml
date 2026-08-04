@@ -10,6 +10,12 @@ updates:
     commit-message:
       prefix: "fix"
       prefix-development: "chore"
+    # typescript 7 has no compatible @typescript-eslint release yet
+    # (typescript-eslint/typescript-eslint#12518) — revisit once TS 7.1's
+    # stable compiler API ships.
+    ignore:
+      - dependency-name: "typescript"
+        update-types: ["version-update:semver-major"]
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
