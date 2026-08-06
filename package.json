@@ -62,7 +62,7 @@
     "url": "https://github.com/mstuart/graphql-sentinel/issues"
   },
   "engines": {
-    "node": ">=18.0.0"
+    "node": ">=22"
   },
   "peerDependencies": {
     "@apollo/server": "^4.0.0",
