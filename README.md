@@ -1,9 +1,16 @@
-# graphql-sentinel
+<div align="center">
+  <img src="docs/assets/logo.svg" alt="graphql-sentinel — Comprehensive GraphQL security scanner and runtime shield" width="720">
+</div>
 
-[![CI](https://github.com/mstuart/graphql-sentinel/actions/workflows/ci.yml/badge.svg)](https://github.com/mstuart/graphql-sentinel/actions/workflows/ci.yml)
-[![npm version](https://img.shields.io/npm/v/graphql-sentinel.svg)](https://www.npmjs.com/package/graphql-sentinel)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+<p align="center"><strong>Comprehensive GraphQL security scanner and runtime shield</strong></p>
 
+<p align="center">
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License: MIT"></a>
+  <a href="https://www.npmjs.com/package/graphql-sentinel"><img src="https://img.shields.io/npm/v/graphql-sentinel?label=npm" alt="npm"></a>
+  <img src="https://img.shields.io/badge/node-%E2%89%A518-339933.svg" alt="Node 18+">
+</p>
+
+---
 Comprehensive GraphQL security scanner and runtime shield. Detect vulnerabilities in your GraphQL API and protect it at runtime with validation rules and rate limiting.
 
 ## Quick Start
