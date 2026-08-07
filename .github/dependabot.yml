@@ -13,6 +13,11 @@ updates:
       # typescript-eslint ships TS 7 support.
       - dependency-name: "typescript"
         update-types: ["version-update:semver-major"]
+      # graphql 17 is not yet supported by the surrounding ecosystem:
+      # graphql-request peers on "14 - 16", graphql-yoga on "^15.2.0 || ^16.0.0".
+      # Revisit once those ship v17-compatible releases.
+      - dependency-name: "graphql"
+        update-types: ["version-update:semver-major"]
     commit-message:
       prefix: "fix"
       prefix-development: "chore"
