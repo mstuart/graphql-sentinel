@@ -1,22 +1,31 @@
-import tseslint from '@typescript-eslint/eslint-plugin';
-import tsparser from '@typescript-eslint/parser';
+import typescriptEslint from '@typescript-eslint/eslint-plugin';
+import config from 'ultracite/eslint/core';
 
 export default [
+  ...config,
   {
-    files: ['src/**/*.ts'],
+    files: ['**/*.ts', '**/*.tsx'],
     languageOptions: {
-      parser: tsparser,
-      ecmaVersion: 2022,
-      sourceType: 'module',
-    },
-    plugins: {
-      '@typescript-eslint': tseslint,
+      parserOptions: {
+        project: false,
+      },
     },
     rules: {
-      ...tseslint.configs.recommended.rules,
-      '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
+      ...typescriptEslint.configs['flat/disable-type-checked'].rules,
+    },
+  },
+  {
+    files: ['src/**/*.ts', 'tests/**/*.ts'],
+    rules: {
       '@typescript-eslint/explicit-function-return-type': 'off',
       '@typescript-eslint/no-explicit-any': 'off',
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        {
+          argsIgnorePattern: '^_',
+          varsIgnorePattern: '^_',
+        },
+      ],
     },
   },
 ];
