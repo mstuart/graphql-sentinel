@@ -1,51 +1,34 @@
 import type { ScanReport, Severity } from '../types/index.js';
 
-function mapSeverityToSarif(severity: Severity): 'error' | 'warning' | 'note' {
+const mapSeverityToSarif = (severity: Severity): 'error' | 'warning' | 'note' => {
   switch (severity) {
     case 'critical':
-    case 'high':
+    case 'high': {
       return 'error';
-    case 'medium':
+    }
+    case 'medium': {
       return 'warning';
+    }
     case 'low':
-    case 'info':
+    case 'info': {
       return 'note';
+    }
+    default: {
+      return 'note';
+    }
   }
-}
+};
 
-export function generateSarifReport(report: ScanReport): string {
+export const generateSarifReport = (report: ScanReport): string => {
   const sarif = {
-    version: '2.1.0' as const,
     $schema:
       'https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json',
     runs: [
       {
-        tool: {
-          driver: {
-            name: 'graphql-sentinel',
-            version: '0.1.0',
-            informationUri: 'https://github.com/mstuart/graphql-sentinel',
-            rules: report.results.map((r) => ({
-              id: r.check,
-              name: r.title,
-              shortDescription: { text: r.title },
-              fullDescription: { text: r.description },
-              helpUri: 'https://github.com/mstuart/graphql-sentinel',
-              defaultConfiguration: {
-                level: mapSeverityToSarif(r.severity),
-              },
-              properties: {
-                tags: ['security', 'graphql'],
-              },
-            })),
-          },
-        },
         results: report.results
           .filter((r) => !r.passed)
           .map((r) => ({
-            ruleId: r.check,
             level: mapSeverityToSarif(r.severity),
-            message: { text: `${r.title}: ${r.description}` },
             locations: [
               {
                 physicalLocation: {
@@ -53,19 +36,40 @@ export function generateSarifReport(report: ScanReport): string {
                 },
               },
             ],
-            ...(r.remediation
-              ? {
-                  fixes: [
-                    {
-                      description: { text: r.remediation },
-                    },
-                  ],
-                }
-              : {}),
+            message: { text: `${r.title}: ${r.description}` },
+            ruleId: r.check,
+            ...(r.remediation && {
+              fixes: [
+                {
+                  description: { text: r.remediation },
+                },
+              ],
+            }),
           })),
+        tool: {
+          driver: {
+            informationUri: 'https://github.com/mstuart/graphql-sentinel',
+            name: 'graphql-sentinel',
+            rules: report.results.map((r) => ({
+              defaultConfiguration: {
+                level: mapSeverityToSarif(r.severity),
+              },
+              fullDescription: { text: r.description },
+              helpUri: 'https://github.com/mstuart/graphql-sentinel',
+              id: r.check,
+              name: r.title,
+              properties: {
+                tags: ['security', 'graphql'],
+              },
+              shortDescription: { text: r.title },
+            })),
+            version: '0.1.0',
+          },
+        },
       },
     ],
+    version: '2.1.0' as const,
   };
 
   return JSON.stringify(sarif, null, 2);
-}
+};

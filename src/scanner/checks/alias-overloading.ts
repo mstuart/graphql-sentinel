@@ -1,68 +1,70 @@
 import type { SecurityCheck, ScanResult } from '../../types/index.js';
 
-export const aliasOverloadingCheck: SecurityCheck = {
-  name: 'alias-overloading',
-  severity: 'medium',
+const CHECK_NAME = 'alias-overloading';
 
+export const aliasOverloadingCheck: SecurityCheck = {
+  name: CHECK_NAME,
   async run(endpoint: string, headers?: Record<string, string>): Promise<ScanResult> {
     const aliasCount = 100;
-    const aliases = Array.from({ length: aliasCount }, (_, i) => `a${i}: __typename`).join(' ');
+    const aliases = Array.from({ length: aliasCount }, (_, index) => `a${index}: __typename`).join(
+      ' ',
+    );
     const query = `{ ${aliases} }`;
 
+    // The scanner must report both accepted queries and endpoint failures.
+    // eslint-disable-next-line unicorn/try-complexity
     try {
       const response = await fetch(endpoint, {
-        method: 'POST',
+        body: JSON.stringify({ query }),
         headers: {
           'Content-Type': 'application/json',
           ...headers,
         },
-        body: JSON.stringify({ query }),
+        method: 'POST',
       });
 
-       
       const body: any = await response.json();
       const hasData = body?.data !== undefined && body?.data !== null;
       const aliasKeys = hasData ? Object.keys(body.data) : [];
-      const allAliasesResolved = aliasKeys.length >= aliasCount;
+      const isAllAliasesResolved = aliasKeys.length >= aliasCount;
 
       // Check if server returned errors related to aliases
       const hasAliasError = body?.errors?.some(
-        (e: { message: string }) =>
-          e.message.toLowerCase().includes('alias') ||
-          e.message.toLowerCase().includes('too many') ||
-          e.message.toLowerCase().includes('limit'),
+        (error: { message: string }) =>
+          error.message.toLowerCase().includes('alias') ||
+          error.message.toLowerCase().includes('too many') ||
+          error.message.toLowerCase().includes('limit'),
       );
 
-      const passed = hasAliasError || !allAliasesResolved;
+      const passed = hasAliasError || !isAllAliasesResolved;
 
       return {
-        check: 'alias-overloading',
-        severity: 'medium',
-        passed,
-        title: 'Alias Overloading Possible',
+        check: CHECK_NAME,
         description: passed
           ? 'Server properly limits the number of aliases in a query.'
           : `Server accepted ${aliasCount} aliases without restriction, enabling alias-based DoS attacks.`,
-        remediation:
-          'Implement alias limits to prevent denial-of-service via alias overloading.',
         details: {
-          aliasesTested: aliasCount,
           aliasesAccepted: aliasKeys.length,
+          aliasesTested: aliasCount,
           blocked: passed,
         },
+        passed,
+        remediation: 'Implement alias limits to prevent denial-of-service via alias overloading.',
+        severity: 'medium',
+        title: 'Alias Overloading Possible',
       };
     } catch (error) {
       return {
-        check: 'alias-overloading',
-        severity: 'medium',
-        passed: true,
-        title: 'Alias Overloading Possible',
-        description:
-          'Could not test alias overloading (endpoint unreachable or request failed).',
-        remediation:
-          'Implement alias limits to prevent denial-of-service via alias overloading.',
+        check: CHECK_NAME,
+        description: 'Could not test alias overloading (endpoint unreachable or request failed).',
         details: { error: String(error) },
+        passed: true,
+        remediation: 'Implement alias limits to prevent denial-of-service via alias overloading.',
+        severity: 'medium',
+        title: 'Alias Overloading Possible',
       };
     }
   },
+
+  severity: 'medium',
 };

@@ -1,5 +1,3 @@
 import type { ScanReport } from '../types/index.js';
 
-export function generateJsonReport(report: ScanReport): string {
-  return JSON.stringify(report, null, 2);
-}
+export const generateJsonReport = (report: ScanReport): string => JSON.stringify(report, null, 2);

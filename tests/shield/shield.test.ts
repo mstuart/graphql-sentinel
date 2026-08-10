@@ -18,30 +18,30 @@ import { createShield } from '../../src/shield/index.js';
 
 // Create a test schema
 const UserType: GraphQLObjectType = new GraphQLObjectType({
-  name: 'User',
   fields: () => ({
-    id: { type: GraphQLString },
-    name: { type: GraphQLString },
     email: { type: GraphQLString },
     friends: { type: new GraphQLList(UserType) },
+    id: { type: GraphQLString },
+    name: { type: GraphQLString },
   }),
+  name: 'User',
 });
 
 const testSchema = new GraphQLSchema({
   query: new GraphQLObjectType({
-    name: 'Query',
     fields: {
+      hello: {
+        type: GraphQLString,
+      },
       user: {
-        type: UserType,
         args: { id: { type: new GraphQLNonNull(GraphQLString) } },
+        type: UserType,
       },
       users: {
         type: new GraphQLList(UserType),
       },
-      hello: {
-        type: GraphQLString,
-      },
     },
+    name: 'Query',
   }),
 });
 
@@ -121,7 +121,7 @@ describe('Alias Limiter', () => {
   });
 
   it('should reject queries with too many aliases', () => {
-    const aliases = Array.from({ length: 20 }, (_, i) => `a${i}: hello`).join(' ');
+    const aliases = Array.from({ length: 20 }, (_, index) => `a${index}: hello`).join(' ');
     const query = parse(`{ ${aliases} }`);
     const errors = validate(testSchema, query, [createAliasLimitRule(15)]);
     expect(errors).toHaveLength(1);
@@ -130,7 +130,7 @@ describe('Alias Limiter', () => {
   });
 
   it('should use default max aliases of 15', () => {
-    const aliases = Array.from({ length: 10 }, (_, i) => `a${i}: hello`).join(' ');
+    const aliases = Array.from({ length: 10 }, (_, index) => `a${index}: hello`).join(' ');
     const query = parse(`{ ${aliases} }`);
     const errors = validate(testSchema, query, [createAliasLimitRule()]);
     expect(errors).toHaveLength(0);
@@ -142,14 +142,14 @@ describe('Introspection Control', () => {
     const query = parse('{ __schema { types { name } } }');
     const errors = validate(testSchema, query, [createIntrospectionControlRule()]);
     expect(errors.length).toBeGreaterThan(0);
-    expect(errors.some((e) => e.message.includes('__schema'))).toBe(true);
+    expect(errors.some((error) => error.message.includes('__schema'))).toBe(true);
   });
 
   it('should block __type introspection', () => {
     const query = parse('{ __type(name: "Query") { name } }');
     const errors = validate(testSchema, query, [createIntrospectionControlRule()]);
     expect(errors.length).toBeGreaterThan(0);
-    expect(errors.some((e) => e.message.includes('__type'))).toBe(true);
+    expect(errors.some((error) => error.message.includes('__type'))).toBe(true);
   });
 
   it('should allow normal queries', () => {
@@ -161,7 +161,7 @@ describe('Introspection Control', () => {
 
 describe('Rate Limiter', () => {
   it('should allow requests within limit', () => {
-    const limiter = createRateLimiter({ window: 1000, max: 10 });
+    const limiter = createRateLimiter({ max: 10, window: 1000 });
     const result = limiter.check('client-1', 1);
     expect(result.allowed).toBe(true);
     expect(result.remaining).toBe(9);
@@ -169,7 +169,7 @@ describe('Rate Limiter', () => {
   });
 
   it('should block requests exceeding limit', () => {
-    const limiter = createRateLimiter({ window: 1000, max: 3 });
+    const limiter = createRateLimiter({ max: 3, window: 1000 });
     limiter.check('client-1', 1);
     limiter.check('client-1', 1);
     limiter.check('client-1', 1);
@@ -180,7 +180,7 @@ describe('Rate Limiter', () => {
   });
 
   it('should track clients independently', () => {
-    const limiter = createRateLimiter({ window: 1000, max: 2 });
+    const limiter = createRateLimiter({ max: 2, window: 1000 });
     limiter.check('client-1', 1);
     limiter.check('client-1', 1);
     const result1 = limiter.check('client-1', 1);
@@ -191,7 +191,7 @@ describe('Rate Limiter', () => {
   });
 
   it('should support cost-based limiting', () => {
-    const limiter = createRateLimiter({ window: 1000, max: 10 });
+    const limiter = createRateLimiter({ max: 10, window: 1000 });
     const result1 = limiter.check('client-1', 5);
     expect(result1.allowed).toBe(true);
     expect(result1.remaining).toBe(5);
@@ -202,7 +202,7 @@ describe('Rate Limiter', () => {
   });
 
   it('should reset client state', () => {
-    const limiter = createRateLimiter({ window: 1000, max: 2 });
+    const limiter = createRateLimiter({ max: 2, window: 1000 });
     limiter.check('client-1', 2);
     limiter.reset('client-1');
     const result = limiter.check('client-1', 1);
@@ -214,11 +214,11 @@ describe('Rate Limiter', () => {
 describe('createShield', () => {
   it('should create shield with all configured rules', () => {
     const shield = createShield({
-      maxDepth: 5,
-      maxComplexity: 100,
-      maxAliases: 10,
       disableIntrospection: true,
-      rateLimit: { window: 60000, max: 100 },
+      maxAliases: 10,
+      maxComplexity: 100,
+      maxDepth: 5,
+      rateLimit: { max: 100, window: 60_000 },
     });
 
     expect(shield.validationRules).toHaveLength(4);
@@ -257,10 +257,10 @@ describe('createShield', () => {
 describe('Field Auth Rule', () => {
   it('should block access to fields requiring auth when not authenticated', () => {
     const rule = createFieldAuthRule({
+      extractContext: () => null,
       rules: {
         'Query.user': { requireAuth: true },
       },
-      extractContext: () => null,
     });
 
     const query = parse('{ user(id: "1") { name } }');
@@ -272,14 +272,14 @@ describe('Field Auth Rule', () => {
 
   it('should allow access to fields requiring auth when authenticated', () => {
     const rule = createFieldAuthRule({
+      extractContext: () => ({
+        authenticated: true,
+        permissions: [],
+        roles: [],
+      }),
       rules: {
         'Query.user': { requireAuth: true },
       },
-      extractContext: () => ({
-        authenticated: true,
-        roles: [],
-        permissions: [],
-      }),
     });
 
     const query = parse('{ user(id: "1") { name } }');
@@ -289,14 +289,14 @@ describe('Field Auth Rule', () => {
 
   it('should block access when user lacks required role', () => {
     const rule = createFieldAuthRule({
+      extractContext: () => ({
+        authenticated: true,
+        permissions: [],
+        roles: ['viewer'],
+      }),
       rules: {
         'Query.users': { requireAuth: true, roles: ['admin'] },
       },
-      extractContext: () => ({
-        authenticated: true,
-        roles: ['viewer'],
-        permissions: [],
-      }),
     });
 
     const query = parse('{ users { name } }');
@@ -308,14 +308,14 @@ describe('Field Auth Rule', () => {
 
   it('should allow access when user has required role', () => {
     const rule = createFieldAuthRule({
+      extractContext: () => ({
+        authenticated: true,
+        permissions: [],
+        roles: ['admin', 'viewer'],
+      }),
       rules: {
         'Query.users': { requireAuth: true, roles: ['admin'] },
       },
-      extractContext: () => ({
-        authenticated: true,
-        roles: ['admin', 'viewer'],
-        permissions: [],
-      }),
     });
 
     const query = parse('{ users { name } }');
@@ -325,17 +325,17 @@ describe('Field Auth Rule', () => {
 
   it('should block access when user lacks required permission', () => {
     const rule = createFieldAuthRule({
-      rules: {
-        'Query.user': {
-          requireAuth: true,
-          permissions: ['read:users'],
-        },
-      },
       extractContext: () => ({
         authenticated: true,
-        roles: [],
         permissions: ['read:posts'],
+        roles: [],
       }),
+      rules: {
+        'Query.user': {
+          permissions: ['read:users'],
+          requireAuth: true,
+        },
+      },
     });
 
     const query = parse('{ user(id: "1") { name } }');
@@ -346,17 +346,17 @@ describe('Field Auth Rule', () => {
 
   it('should allow access when user has required permission', () => {
     const rule = createFieldAuthRule({
-      rules: {
-        'Query.user': {
-          requireAuth: true,
-          permissions: ['read:users'],
-        },
-      },
       extractContext: () => ({
         authenticated: true,
-        roles: [],
         permissions: ['read:users', 'write:users'],
+        roles: [],
       }),
+      rules: {
+        'Query.user': {
+          permissions: ['read:users'],
+          requireAuth: true,
+        },
+      },
     });
 
     const query = parse('{ user(id: "1") { name } }');
@@ -366,10 +366,10 @@ describe('Field Auth Rule', () => {
 
   it('should allow fields with no auth rules', () => {
     const rule = createFieldAuthRule({
+      extractContext: () => null,
       rules: {
         'Query.user': { requireAuth: true },
       },
-      extractContext: () => null,
     });
 
     const query = parse('{ hello }');

@@ -28,4 +28,7 @@ export default [
       ],
     },
   },
+  {
+    ignores: ['package.json', 'tsconfig.json'],
+  },
 ];

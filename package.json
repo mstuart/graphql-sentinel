@@ -62,6 +62,9 @@
   "bugs": {
     "url": "https://github.com/mstuart/graphql-sentinel/issues"
   },
+  "browserslist": [
+    "node >= 22"
+  ],
   "engines": {
     "node": ">=22"
   },
