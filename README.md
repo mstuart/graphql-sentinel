@@ -14,6 +14,7 @@
 </p>
 
 ---
+
 Comprehensive GraphQL security scanner and runtime shield. Detect vulnerabilities in your GraphQL API and protect it at runtime with validation rules and rate limiting.
 
 ## Quick Start
@@ -96,7 +97,7 @@ graphql-sentinel proxy https://upstream-api.example.com/graphql \
 ## Security Checks
 
 | Check | Severity | Description |
-|-------|----------|-------------|
+| --- | --- | --- |
 | `introspection` | Medium | Detects if introspection is enabled, exposing the full schema |
 | `depth-limit` | High | Tests for absence of query depth limits (DoS vector) |
 | `batch-attack` | Medium | Checks if batch queries are accepted (amplification attacks) |
@@ -127,7 +128,7 @@ import { createYoga, createSchema } from 'graphql-yoga';
 import { useSentinelShield } from 'graphql-sentinel';
 
 const yoga = createYoga({
-  schema: createSchema({ /* ... */ }),
+  schema: createSchema({/* ... */}),
   plugins: [
     useSentinelShield({
       maxDepth: 10,
@@ -170,11 +171,14 @@ const app = express();
 app.use(express.json());
 
 // Apply before your GraphQL middleware
-app.use('/graphql', sentinelMiddleware(schema, {
-  maxDepth: 10,
-  maxAliases: 15,
-  disableIntrospection: true,
-}));
+app.use(
+  '/graphql',
+  sentinelMiddleware(schema, {
+    maxDepth: 10,
+    maxAliases: 15,
+    disableIntrospection: true,
+  }),
+);
 ```
 
 ### Field-Level Authorization
@@ -257,6 +261,7 @@ server.listen(4000);
 ```
 
 The proxy:
+
 - Parses and validates all incoming GraphQL queries against shield rules
 - Blocks queries that exceed depth, complexity, or alias limits
 - Blocks introspection queries when configured
@@ -341,20 +346,20 @@ jobs:
 
 ### Action Inputs
 
-| Input | Required | Default | Description |
-|-------|----------|---------|-------------|
-| `endpoint` | Yes | - | GraphQL endpoint URL to scan |
-| `format` | No | `terminal` | Output format (terminal, json, html, sarif) |
-| `checks` | No | all | Comma-separated list of checks to run |
-| `fail-on-severity` | No | `high` | Minimum severity to fail the build |
-| `headers` | No | - | Headers, one per line ("Key: Value") |
-| `timeout` | No | `10000` | Timeout per check in milliseconds |
+| Input              | Required | Default    | Description                                 |
+| ------------------ | -------- | ---------- | ------------------------------------------- |
+| `endpoint`         | Yes      | -          | GraphQL endpoint URL to scan                |
+| `format`           | No       | `terminal` | Output format (terminal, json, html, sarif) |
+| `checks`           | No       | all        | Comma-separated list of checks to run       |
+| `fail-on-severity` | No       | `high`     | Minimum severity to fail the build          |
+| `headers`          | No       | -          | Headers, one per line ("Key: Value")        |
+| `timeout`          | No       | `10000`    | Timeout per check in milliseconds           |
 
 ### Action Outputs
 
-| Output | Description |
-|--------|-------------|
-| `report` | Path to the generated report file |
+| Output   | Description                              |
+| -------- | ---------------------------------------- |
+| `report` | Path to the generated report file        |
 | `passed` | Whether the scan passed (`true`/`false`) |
 
 The action automatically uploads the report as a build artifact named `sentinel-security-report`.
@@ -429,66 +434,66 @@ const dashboard = generateDashboard([report], { title: 'Security Dashboard' });
 
 ### ScannerConfig
 
-| Option | Type | Default | Description |
-|--------|------|---------|-------------|
-| `endpoint` | `string` | required | GraphQL endpoint URL |
-| `headers` | `Record<string, string>` | `undefined` | Custom HTTP headers |
-| `checks` | `string[]` | all checks | List of check names to run |
-| `timeout` | `number` | `10000` | Timeout per check in milliseconds |
+| Option     | Type                     | Default     | Description                       |
+| ---------- | ------------------------ | ----------- | --------------------------------- |
+| `endpoint` | `string`                 | required    | GraphQL endpoint URL              |
+| `headers`  | `Record<string, string>` | `undefined` | Custom HTTP headers               |
+| `checks`   | `string[]`               | all checks  | List of check names to run        |
+| `timeout`  | `number`                 | `10000`     | Timeout per check in milliseconds |
 
 ### ShieldConfig
 
-| Option | Type | Default | Description |
-|--------|------|---------|-------------|
-| `maxDepth` | `number` | `undefined` | Maximum query nesting depth |
-| `maxComplexity` | `number` | `undefined` | Maximum query complexity score |
-| `maxAliases` | `number` | `undefined` | Maximum number of aliases per query |
-| `disableIntrospection` | `boolean` | `false` | Block introspection queries |
-| `costLimit` | `number` | `undefined` | Maximum query cost |
-| `rateLimit.window` | `number` | `undefined` | Rate limit window in milliseconds |
-| `rateLimit.max` | `number` | `undefined` | Maximum cost per window |
-| `fieldAuth` | `FieldAuthConfig` | `undefined` | Field-level authorization rules |
+| Option                 | Type              | Default     | Description                         |
+| ---------------------- | ----------------- | ----------- | ----------------------------------- |
+| `maxDepth`             | `number`          | `undefined` | Maximum query nesting depth         |
+| `maxComplexity`        | `number`          | `undefined` | Maximum query complexity score      |
+| `maxAliases`           | `number`          | `undefined` | Maximum number of aliases per query |
+| `disableIntrospection` | `boolean`         | `false`     | Block introspection queries         |
+| `costLimit`            | `number`          | `undefined` | Maximum query cost                  |
+| `rateLimit.window`     | `number`          | `undefined` | Rate limit window in milliseconds   |
+| `rateLimit.max`        | `number`          | `undefined` | Maximum cost per window             |
+| `fieldAuth`            | `FieldAuthConfig` | `undefined` | Field-level authorization rules     |
 
 ### ProxyConfig
 
-| Option | Type | Default | Description |
-|--------|------|---------|-------------|
-| `target` | `string` | required | Upstream GraphQL endpoint URL |
-| `port` | `number` | `4000` | Proxy listening port |
-| `shield` | `ShieldConfig` | required | Shield configuration |
+| Option    | Type                     | Default     | Description                    |
+| --------- | ------------------------ | ----------- | ------------------------------ |
+| `target`  | `string`                 | required    | Upstream GraphQL endpoint URL  |
+| `port`    | `number`                 | `4000`      | Proxy listening port           |
+| `shield`  | `ShieldConfig`           | required    | Shield configuration           |
 | `headers` | `Record<string, string>` | `undefined` | Headers to forward to upstream |
-| `cors` | `boolean` | `true` | Enable CORS headers |
+| `cors`    | `boolean`                | `true`      | Enable CORS headers            |
 
 ### FieldAuthConfig
 
 | Option | Type | Description |
-|--------|------|-------------|
+| --- | --- | --- |
 | `rules` | `Record<string, FieldAuthRule>` | Map of `TypeName.fieldName` to auth rules |
 | `extractContext` | `(context) => UserContext \| null` | Function to extract user context |
 
 ### FieldAuthRule
 
-| Option | Type | Description |
-|--------|------|-------------|
-| `requireAuth` | `boolean` | Whether authentication is required |
-| `roles` | `string[]` | Required roles (any match grants access) |
+| Option        | Type       | Description                                    |
+| ------------- | ---------- | ---------------------------------------------- |
+| `requireAuth` | `boolean`  | Whether authentication is required             |
+| `roles`       | `string[]` | Required roles (any match grants access)       |
 | `permissions` | `string[]` | Required permissions (any match grants access) |
 
 ## Comparison with graphql-armor
 
 [graphql-armor](https://github.com/Escape-Technologies/graphql-armor) is an excellent runtime-only shield. graphql-sentinel provides a broader security toolkit:
 
-| Feature | graphql-sentinel | graphql-armor |
-|---------|-----------------|---------------|
-| Runtime shield (depth, complexity, aliases) | Yes | Yes |
-| Security scanner (7 automated checks) | Yes | No |
-| CLI for CI/CD pipelines | Yes | No |
-| SARIF reports for GitHub Security tab | Yes | No |
-| Interactive security dashboard | Yes | No |
-| Reverse proxy mode | Yes | No |
-| Reusable GitHub Action | Yes | No |
-| Field-level authorization | Yes | No |
-| Express middleware | Yes | No |
+| Feature                                     | graphql-sentinel | graphql-armor |
+| ------------------------------------------- | ---------------- | ------------- |
+| Runtime shield (depth, complexity, aliases) | Yes              | Yes           |
+| Security scanner (7 automated checks)       | Yes              | No            |
+| CLI for CI/CD pipelines                     | Yes              | No            |
+| SARIF reports for GitHub Security tab       | Yes              | No            |
+| Interactive security dashboard              | Yes              | No            |
+| Reverse proxy mode                          | Yes              | No            |
+| Reusable GitHub Action                      | Yes              | No            |
+| Field-level authorization                   | Yes              | No            |
+| Express middleware                          | Yes              | No            |
 
 Choose graphql-armor if you only need runtime protection. Choose graphql-sentinel if you also want scanning, reporting, CI integration, or proxy deployment.
 

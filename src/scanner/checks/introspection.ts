@@ -2,49 +2,51 @@ import type { SecurityCheck, ScanResult } from '../../types/index.js';
 
 export const introspectionCheck: SecurityCheck = {
   name: 'introspection',
-  severity: 'medium',
-
   async run(endpoint: string, headers?: Record<string, string>): Promise<ScanResult> {
     const query = '{ __schema { types { name } } }';
 
+    // The scanner must report both introspection behavior and endpoint failures.
+    // eslint-disable-next-line unicorn/try-complexity
     try {
       const response = await fetch(endpoint, {
-        method: 'POST',
+        body: JSON.stringify({ query }),
         headers: {
           'Content-Type': 'application/json',
           ...headers,
         },
-        body: JSON.stringify({ query }),
+        method: 'POST',
       });
 
-       
       const body: any = await response.json();
       const hasSchema = body?.data?.__schema?.types?.length > 0;
 
       return {
         check: 'introspection',
-        severity: 'medium',
-        passed: !hasSchema,
-        title: 'Introspection Enabled',
         description: hasSchema
           ? 'GraphQL introspection is enabled, exposing the full API schema to attackers.'
           : 'GraphQL introspection is properly disabled.',
-        remediation: 'Disable introspection in production to prevent schema exposure.',
         details: {
           introspectionEnabled: hasSchema,
           typesFound: hasSchema ? body.data.__schema.types.length : 0,
         },
+        passed: !hasSchema,
+        remediation: 'Disable introspection in production to prevent schema exposure.',
+        severity: 'medium',
+        title: 'Introspection Enabled',
       };
     } catch (error) {
       return {
         check: 'introspection',
-        severity: 'medium',
-        passed: true,
-        title: 'Introspection Enabled',
-        description: 'Could not perform introspection query (likely disabled or endpoint unreachable).',
-        remediation: 'Disable introspection in production to prevent schema exposure.',
+        description:
+          'Could not perform introspection query (likely disabled or endpoint unreachable).',
         details: { error: String(error) },
+        passed: true,
+        remediation: 'Disable introspection in production to prevent schema exposure.',
+        severity: 'medium',
+        title: 'Introspection Enabled',
       };
     }
   },
+
+  severity: 'medium',
 };

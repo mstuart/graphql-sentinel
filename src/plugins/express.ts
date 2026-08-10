@@ -1,6 +1,7 @@
-import { validate, parse, type GraphQLSchema, type GraphQLError } from 'graphql';
-import type { ShieldConfig } from '../types/index.js';
+import { validate, parse } from 'graphql';
 import { createShield } from '../shield/index.js';
+import type { GraphQLSchema, GraphQLError } from 'graphql';
+import type { ShieldConfig } from '../types/index.js';
 
 export interface SentinelRequest {
   body?: {
@@ -9,15 +10,15 @@ export interface SentinelRequest {
 }
 
 export interface SentinelResponse {
-  status(code: number): SentinelResponse;
-  json(data: unknown): void;
+  status: (code: number) => SentinelResponse;
+  json: (data: unknown) => void;
 }
 
-export function sentinelMiddleware(schema: GraphQLSchema, config?: ShieldConfig) {
+export const sentinelMiddleware = (schema: GraphQLSchema, config?: ShieldConfig) => {
   const shield = createShield(config ?? {});
 
-  return (req: SentinelRequest, res: SentinelResponse, next: () => void) => {
-    const query = req.body?.query;
+  return (request: SentinelRequest, response: SentinelResponse, next: () => void) => {
+    const query = request.body?.query;
 
     if (!query || typeof query !== 'string') {
       next();
@@ -36,12 +37,12 @@ export function sentinelMiddleware(schema: GraphQLSchema, config?: ShieldConfig)
     const errors = validate(schema, document, shield.validationRules);
 
     if (errors.length > 0) {
-      res.status(400).json({
+      response.status(400).json({
         errors: errors.map((error: GraphQLError) => ({
-          message: error.message,
           extensions: {
             code: 'GRAPHQL_SENTINEL_BLOCKED',
           },
+          message: error.message,
         })),
       });
       return;
@@ -49,4 +50,4 @@ export function sentinelMiddleware(schema: GraphQLSchema, config?: ShieldConfig)
 
     next();
   };
-}
+};

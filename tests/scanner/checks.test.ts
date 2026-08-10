@@ -1,6 +1,4 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import http from 'node:http';
-import { startServer, stopServer } from './mock-server.js';
 import { introspectionCheck } from '../../src/scanner/checks/introspection.js';
 import { depthLimitCheck } from '../../src/scanner/checks/depth-limit.js';
 import { batchAttackCheck } from '../../src/scanner/checks/batch-attack.js';
@@ -8,22 +6,22 @@ import { fieldSuggestionCheck } from '../../src/scanner/checks/field-suggestion.
 import { aliasOverloadingCheck } from '../../src/scanner/checks/alias-overloading.js';
 import { csrfCheck } from '../../src/scanner/checks/csrf.js';
 import { authBypassCheck } from '../../src/scanner/checks/auth-bypass.js';
+import { startServer, stopServer } from './mock-server.js';
+import type http from 'node:http';
 
 describe('Scanner Checks - Vulnerable Server', () => {
   let server: http.Server;
   let url: string;
 
   beforeAll(async () => {
-    const result = await startServer({
-      introspectionEnabled: true,
-      depthLimitEnabled: false,
-      batchEnabled: true,
-      fieldSuggestionsEnabled: true,
+    ({ server, url } = await startServer({
       aliasLimitEnabled: false,
+      batchEnabled: true,
+      depthLimitEnabled: false,
+      fieldSuggestionsEnabled: true,
       getQueriesEnabled: true,
-    });
-    server = result.server;
-    url = result.url;
+      introspectionEnabled: true,
+    }));
   });
 
   afterAll(async () => {
@@ -79,16 +77,14 @@ describe('Scanner Checks - Secured Server', () => {
   let url: string;
 
   beforeAll(async () => {
-    const result = await startServer({
-      introspectionEnabled: false,
-      depthLimitEnabled: true,
-      batchEnabled: false,
-      fieldSuggestionsEnabled: false,
+    ({ server, url } = await startServer({
       aliasLimitEnabled: true,
+      batchEnabled: false,
+      depthLimitEnabled: true,
+      fieldSuggestionsEnabled: false,
       getQueriesEnabled: false,
-    });
-    server = result.server;
-    url = result.url;
+      introspectionEnabled: false,
+    }));
   });
 
   afterAll(async () => {
@@ -131,12 +127,10 @@ describe('Auth Bypass Check - Public Server (no auth)', () => {
   let url: string;
 
   beforeAll(async () => {
-    const result = await startServer({
-      introspectionEnabled: true,
+    ({ server, url } = await startServer({
       authRequired: false,
-    });
-    server = result.server;
-    url = result.url;
+      introspectionEnabled: true,
+    }));
   });
 
   afterAll(async () => {
@@ -158,13 +152,11 @@ describe('Auth Bypass Check - Auth Required Server', () => {
   const validToken = 'valid_test_token_12345';
 
   beforeAll(async () => {
-    const result = await startServer({
-      introspectionEnabled: true,
+    ({ server, url } = await startServer({
       authRequired: true,
+      introspectionEnabled: true,
       validToken,
-    });
-    server = result.server;
-    url = result.url;
+    }));
   });
 
   afterAll(async () => {
@@ -196,12 +188,10 @@ describe('Auth Bypass Check - Vulnerable Server (no auth enforced)', () => {
   beforeAll(async () => {
     // Server requires auth but we'll simulate a broken one
     // by using authRequired: false but providing auth headers in the test
-    const result = await startServer({
-      introspectionEnabled: true,
+    ({ server, url } = await startServer({
       authRequired: false,
-    });
-    server = result.server;
-    url = result.url;
+      introspectionEnabled: true,
+    }));
   });
 
   afterAll(async () => {

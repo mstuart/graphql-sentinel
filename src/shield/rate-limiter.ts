@@ -1,6 +1,8 @@
 export interface RateLimitConfig {
-  window: number; // window in milliseconds
-  max: number; // max cost allowed per window
+  /** Window length in milliseconds. */
+  window: number;
+  /** Maximum cost allowed per window. */
+  max: number;
 }
 
 export interface RateLimitResult {
@@ -12,15 +14,15 @@ interface ClientRecord {
   entries: { timestamp: number; cost: number }[];
 }
 
-export function createRateLimiter(config: RateLimitConfig) {
+export const createRateLimiter = (config: RateLimitConfig) => {
   const { window, max } = config;
   const clients = new Map<string, ClientRecord>();
 
   // Periodic cleanup
   const cleanupInterval = setInterval(() => {
     const now = Date.now();
-    for (const [key, record] of clients.entries()) {
-      record.entries = record.entries.filter((e) => now - e.timestamp < window);
+    for (const [key, record] of clients) {
+      record.entries = record.entries.filter((entry) => now - entry.timestamp < window);
       if (record.entries.length === 0) {
         clients.delete(key);
       }
@@ -33,20 +35,20 @@ export function createRateLimiter(config: RateLimitConfig) {
   }
 
   return {
-    check(key: string, cost: number = 1): RateLimitResult {
+    check(key: string, cost = 1): RateLimitResult {
       const now = Date.now();
 
-      if (!clients.has(key)) {
-        clients.set(key, { entries: [] });
+      let record = clients.get(key);
+      if (!record) {
+        record = { entries: [] };
+        clients.set(key, record);
       }
 
-      const record = clients.get(key)!;
-
       // Remove expired entries
-      record.entries = record.entries.filter((e) => now - e.timestamp < window);
+      record.entries = record.entries.filter((entry) => now - entry.timestamp < window);
 
       // Calculate current total cost
-      const currentCost = record.entries.reduce((sum, e) => sum + e.cost, 0);
+      const currentCost = record.entries.reduce((sum, entry) => sum + entry.cost, 0);
 
       if (currentCost + cost > max) {
         return {
@@ -55,12 +57,17 @@ export function createRateLimiter(config: RateLimitConfig) {
         };
       }
 
-      record.entries.push({ timestamp: now, cost });
+      record.entries.push({ cost, timestamp: now });
 
       return {
         allowed: true,
         remaining: max - currentCost - cost,
       };
+    },
+
+    destroy() {
+      clearInterval(cleanupInterval);
+      clients.clear();
     },
 
     reset(key?: string) {
@@ -70,10 +77,5 @@ export function createRateLimiter(config: RateLimitConfig) {
         clients.clear();
       }
     },
-
-    destroy() {
-      clearInterval(cleanupInterval);
-      clients.clear();
-    },
   };
-}
+};

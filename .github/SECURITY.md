@@ -13,5 +13,5 @@ We will acknowledge receipt within 48 hours and aim to release a fix within 7 da
 ## Supported Versions
 
 | Version | Supported |
-|---------|-----------|
+| ------- | --------- |
 | 1.0.x   | Yes       |

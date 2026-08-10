@@ -1,18 +1,18 @@
+import { readFileSync } from 'node:fs';
 import { defineConfig } from 'tsup';
-import { readFileSync } from 'fs';
 
-const pkg = JSON.parse(readFileSync('./package.json', 'utf-8'));
+const packageJson = JSON.parse(readFileSync('./package.json', 'utf-8'));
 
 export default defineConfig({
+  clean: true,
+  define: {
+    'process.env.PACKAGE_VERSION': JSON.stringify(packageJson.version),
+  },
+  dts: true,
   entry: ['src/index.ts', 'src/cli.ts'],
   format: ['esm', 'cjs'],
-  dts: true,
-  splitting: false,
-  sourcemap: true,
-  clean: true,
-  target: 'node18',
   shims: true,
-  define: {
-    'process.env.PACKAGE_VERSION': JSON.stringify(pkg.version),
-  },
+  sourcemap: true,
+  splitting: false,
+  target: 'node18',
 });

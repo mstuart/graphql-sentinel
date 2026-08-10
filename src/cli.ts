@@ -1,9 +1,10 @@
-#!/usr/bin/env node
 import { Command } from 'commander';
 import { createScanCommand } from './cli/scan.js';
 import { createProxyCommand } from './cli/proxy.js';
 
-const program = new Command()
+const program = new Command();
+
+program
   .name('graphql-sentinel')
   .description('GraphQL security scanner and runtime shield')
   .version(process.env.PACKAGE_VERSION || '0.1.0');

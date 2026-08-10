@@ -1,5 +1,5 @@
-import type { ASTVisitor, ValidationContext } from 'graphql';
 import { GraphQLError } from 'graphql';
+import type { ASTVisitor, ValidationContext } from 'graphql';
 
 export interface ComplexityConfig {
   maxComplexity?: number;
@@ -7,27 +7,34 @@ export interface ComplexityConfig {
   listFieldMultiplier?: number;
 }
 
-export function createComplexityRule(config: ComplexityConfig = {}) {
-  const {
-    maxComplexity = 1000,
-    defaultFieldCost = 1,
-    listFieldMultiplier = 10,
-  } = config;
+export const createComplexityRule = (config: ComplexityConfig = {}) => {
+  const { maxComplexity = 1000, defaultFieldCost = 1, listFieldMultiplier = 10 } = config;
 
   return function ComplexityRule(context: ValidationContext): ASTVisitor {
     let complexity = 0;
     const multiplierStack: number[] = [1];
 
     return {
+      Document: {
+        leave() {
+          if (complexity > maxComplexity) {
+            context.reportError(
+              new GraphQLError(
+                `Query complexity of ${complexity} exceeds maximum allowed complexity of ${maxComplexity}.`,
+              ),
+            );
+          }
+        },
+      },
       Field: {
-        enter(_node) {
-          const currentMultiplier = multiplierStack[multiplierStack.length - 1] || 1;
+        enter() {
+          const currentMultiplier = multiplierStack.at(-1) || 1;
           complexity += defaultFieldCost * currentMultiplier;
 
           // Check if field returns a list type
-          const fieldDef = context.getFieldDef();
-          if (fieldDef) {
-            const type = fieldDef.type;
+          const fieldDefinition = context.getFieldDef();
+          if (fieldDefinition) {
+            const { type } = fieldDefinition;
             const typeName = type.toString();
             if (typeName.startsWith('[')) {
               multiplierStack.push(currentMultiplier * listFieldMultiplier);
@@ -42,17 +49,6 @@ export function createComplexityRule(config: ComplexityConfig = {}) {
           multiplierStack.pop();
         },
       },
-      Document: {
-        leave() {
-          if (complexity > maxComplexity) {
-            context.reportError(
-              new GraphQLError(
-                `Query complexity of ${complexity} exceeds maximum allowed complexity of ${maxComplexity}.`,
-              ),
-            );
-          }
-        },
-      },
     };
   };
-}
+};

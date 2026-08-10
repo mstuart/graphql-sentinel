@@ -1,36 +1,31 @@
 import { describe, it, expect, vi } from 'vitest';
-import {
-  GraphQLSchema,
-  GraphQLObjectType,
-  GraphQLString,
-  GraphQLList,
-} from 'graphql';
+import { GraphQLSchema, GraphQLObjectType, GraphQLString, GraphQLList } from 'graphql';
 import { useSentinelShield } from '../../src/plugins/yoga.js';
 import { sentinelApolloPlugin } from '../../src/plugins/apollo.js';
 import { sentinelMiddleware } from '../../src/plugins/express.js';
 
 const testSchema = new GraphQLSchema({
   query: new GraphQLObjectType({
-    name: 'Query',
     fields: {
       hello: { type: GraphQLString },
       users: {
         type: new GraphQLList(
           new GraphQLObjectType({
-            name: 'User',
             fields: {
               name: { type: GraphQLString },
             },
+            name: 'User',
           }),
         ),
       },
     },
+    name: 'Query',
   }),
 });
 
 describe('Yoga Plugin', () => {
   it('should create a valid Yoga plugin', () => {
-    const plugin = useSentinelShield({ maxDepth: 5, disableIntrospection: true });
+    const plugin = useSentinelShield({ disableIntrospection: true, maxDepth: 5 });
     expect(plugin).toBeDefined();
     expect(plugin.onValidate).toBeDefined();
     expect(typeof plugin.onValidate).toBe('function');
@@ -38,13 +33,15 @@ describe('Yoga Plugin', () => {
 
   it('should add validation rules via onValidate', () => {
     const plugin = useSentinelShield({
-      maxDepth: 5,
-      maxAliases: 10,
       disableIntrospection: true,
+      maxAliases: 10,
+      maxDepth: 5,
     });
 
     const rules: unknown[] = [];
-    const addValidationRule = (rule: unknown) => rules.push(rule);
+    const addValidationRule = (rule: unknown) => {
+      rules.push(rule);
+    };
 
     plugin.onValidate({ addValidationRule });
     expect(rules).toHaveLength(3);
@@ -53,7 +50,11 @@ describe('Yoga Plugin', () => {
   it('should work with empty config', () => {
     const plugin = useSentinelShield();
     const rules: unknown[] = [];
-    plugin.onValidate({ addValidationRule: (r: unknown) => rules.push(r) });
+    plugin.onValidate({
+      addValidationRule: (rule: unknown) => {
+        rules.push(rule);
+      },
+    });
     expect(rules).toHaveLength(0);
   });
 });
@@ -80,36 +81,36 @@ describe('Express Middleware', () => {
 
   it('should call next for valid queries', () => {
     const middleware = sentinelMiddleware(testSchema, { maxDepth: 10 });
-    const req = { body: { query: '{ hello }' } };
-    const res = {
-      status: vi.fn().mockReturnThis(),
+    const request = { body: { query: '{ hello }' } };
+    const response = {
       json: vi.fn(),
+      status: vi.fn().mockReturnThis(),
     };
     const next = vi.fn();
 
-    middleware(req, res, next);
+    middleware(request, response, next);
     expect(next).toHaveBeenCalled();
-    expect(res.status).not.toHaveBeenCalled();
+    expect(response.status).not.toHaveBeenCalled();
   });
 
   it('should block queries that violate rules', () => {
     const middleware = sentinelMiddleware(testSchema, { disableIntrospection: true });
-    const req = { body: { query: '{ __schema { types { name } } }' } };
-    const res = {
-      status: vi.fn().mockReturnThis(),
+    const request = { body: { query: '{ __schema { types { name } } }' } };
+    const response = {
       json: vi.fn(),
+      status: vi.fn().mockReturnThis(),
     };
     const next = vi.fn();
 
-    middleware(req, res, next);
+    middleware(request, response, next);
     expect(next).not.toHaveBeenCalled();
-    expect(res.status).toHaveBeenCalledWith(400);
-    expect(res.json).toHaveBeenCalledWith(
+    expect(response.status).toHaveBeenCalledWith(400);
+    expect(response.json).toHaveBeenCalledWith(
       expect.objectContaining({
         errors: expect.arrayContaining([
           expect.objectContaining({
-            message: expect.stringContaining('__schema'),
             extensions: { code: 'GRAPHQL_SENTINEL_BLOCKED' },
+            message: expect.stringContaining('__schema'),
           }),
         ]),
       }),
@@ -118,27 +119,27 @@ describe('Express Middleware', () => {
 
   it('should call next when no query is present', () => {
     const middleware = sentinelMiddleware(testSchema, { maxDepth: 5 });
-    const req = { body: {} };
-    const res = {
-      status: vi.fn().mockReturnThis(),
+    const request = { body: {} };
+    const response = {
       json: vi.fn(),
+      status: vi.fn().mockReturnThis(),
     };
     const next = vi.fn();
 
-    middleware(req, res, next);
+    middleware(request, response, next);
     expect(next).toHaveBeenCalled();
   });
 
   it('should call next for invalid query syntax', () => {
     const middleware = sentinelMiddleware(testSchema, { maxDepth: 5 });
-    const req = { body: { query: '{ this is not valid graphql :::' } };
-    const res = {
-      status: vi.fn().mockReturnThis(),
+    const request = { body: { query: '{ this is not valid graphql :::' } };
+    const response = {
       json: vi.fn(),
+      status: vi.fn().mockReturnThis(),
     };
     const next = vi.fn();
 
-    middleware(req, res, next);
+    middleware(request, response, next);
     expect(next).toHaveBeenCalled();
   });
 });
