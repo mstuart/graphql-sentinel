@@ -1,23 +1,21 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import http from 'node:http';
-import { startServer, stopServer } from './mock-server.js';
 import { runScan } from '../../src/scanner/runner.js';
+import { startServer, stopServer } from './mock-server.js';
+import type http from 'node:http';
 
 describe('Scanner Runner', () => {
   let server: http.Server;
   let url: string;
 
   beforeAll(async () => {
-    const result = await startServer({
-      introspectionEnabled: true,
-      depthLimitEnabled: false,
-      batchEnabled: true,
-      fieldSuggestionsEnabled: true,
+    ({ server, url } = await startServer({
       aliasLimitEnabled: false,
+      batchEnabled: true,
+      depthLimitEnabled: false,
+      fieldSuggestionsEnabled: true,
       getQueriesEnabled: true,
-    });
-    server = result.server;
-    url = result.url;
+      introspectionEnabled: true,
+    }));
   });
 
   afterAll(async () => {
@@ -37,8 +35,8 @@ describe('Scanner Runner', () => {
 
   it('should filter checks by name', async () => {
     const report = await runScan({
-      endpoint: url,
       checks: ['introspection', 'csrf'],
+      endpoint: url,
     });
 
     expect(report.results).toHaveLength(2);
@@ -63,9 +61,9 @@ describe('Scanner Runner', () => {
 
   it('should handle timeout gracefully', async () => {
     const report = await runScan({
-      endpoint: url,
-      timeout: 10000,
       checks: ['introspection'],
+      endpoint: url,
+      timeout: 10_000,
     });
 
     expect(report.results).toHaveLength(1);

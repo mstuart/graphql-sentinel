@@ -1,7 +1,7 @@
-import type { ShieldConfig } from '../types/index.js';
 import { createShield } from '../shield/index.js';
+import type { ShieldConfig } from '../types/index.js';
 
-export function useSentinelShield(config?: ShieldConfig) {
+export const useSentinelShield = (config?: ShieldConfig) => {
   const shield = createShield(config ?? {});
   return {
     onValidate({ addValidationRule }: { addValidationRule: (rule: unknown) => void }) {
@@ -10,4 +10,4 @@ export function useSentinelShield(config?: ShieldConfig) {
       }
     },
   };
-}
+};

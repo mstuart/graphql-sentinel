@@ -1,6 +1,7 @@
-import { validate, type GraphQLSchema, type DocumentNode } from 'graphql';
-import type { ShieldConfig } from '../types/index.js';
+import { validate } from 'graphql';
 import { createShield } from '../shield/index.js';
+import type { GraphQLSchema, DocumentNode } from 'graphql';
+import type { ShieldConfig } from '../types/index.js';
 
 export interface ApolloPluginContext {
   request: {
@@ -10,26 +11,24 @@ export interface ApolloPluginContext {
   schema: GraphQLSchema;
 }
 
-export function sentinelApolloPlugin(config?: ShieldConfig) {
+export const sentinelApolloPlugin = (config?: ShieldConfig) => {
   const shield = createShield(config ?? {});
 
   return {
-    async requestDidStart() {
-      return {
-        async didResolveOperation(requestContext: ApolloPluginContext) {
-          const { document, schema } = requestContext;
+    requestDidStart: async () => ({
+      async didResolveOperation(requestContext: ApolloPluginContext) {
+        const { document, schema } = requestContext;
 
-          if (!document) {
-            return;
-          }
+        if (!document) {
+          return;
+        }
 
-          const errors = validate(schema, document, shield.validationRules);
+        const errors = validate(schema, document, shield.validationRules);
 
-          if (errors.length > 0) {
-            throw errors[0];
-          }
-        },
-      };
-    },
+        if (errors.length > 0) {
+          throw errors[0];
+        }
+      },
+    }),
   };
-}
+};

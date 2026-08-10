@@ -1,48 +1,48 @@
 import { describe, it, expect } from 'vitest';
-import type { ScanReport } from '../../src/types/index.js';
 import { generateReport } from '../../src/reporter/index.js';
 import { generateJsonReport } from '../../src/reporter/json.js';
 import { generateTerminalReport } from '../../src/reporter/terminal.js';
 import { generateHtmlReport } from '../../src/reporter/html.js';
 import { generateSarifReport } from '../../src/reporter/sarif.js';
 import { generateDashboard, calculatePostureScore } from '../../src/reporter/dashboard.js';
+import type { ScanReport } from '../../src/types/index.js';
 
 const mockReport: ScanReport = {
-  target: 'http://localhost:4000/graphql',
-  timestamp: '2024-01-15T10:30:00.000Z',
   duration: 1500,
   results: [
     {
       check: 'introspection',
-      severity: 'medium',
-      passed: false,
-      title: 'Introspection Enabled',
       description: 'GraphQL introspection is enabled.',
+      passed: false,
       remediation: 'Disable introspection in production.',
+      severity: 'medium',
+      title: 'Introspection Enabled',
     },
     {
       check: 'depth-limit',
-      severity: 'high',
-      passed: false,
-      title: 'No Query Depth Limit',
       description: 'Server does not enforce depth limits.',
+      passed: false,
       remediation: 'Enforce query depth limits.',
+      severity: 'high',
+      title: 'No Query Depth Limit',
     },
     {
       check: 'csrf',
-      severity: 'high',
-      passed: true,
-      title: 'GET Mutations Allowed',
       description: 'Server does not accept GET queries.',
+      passed: true,
       remediation: 'Disable GET for mutations.',
+      severity: 'high',
+      title: 'GET Mutations Allowed',
     },
   ],
   summary: {
-    total: 3,
-    passed: 1,
+    bySeverity: { critical: 0, high: 1, info: 0, low: 0, medium: 1 },
     failed: 2,
-    bySeverity: { critical: 0, high: 1, medium: 1, low: 0, info: 0 },
+    passed: 1,
+    total: 3,
   },
+  target: 'http://localhost:4000/graphql',
+  timestamp: '2024-01-15T10:30:00.000Z',
 };
 
 describe('JSON Reporter', () => {
@@ -170,7 +170,7 @@ describe('SARIF Reporter', () => {
   it('should include tool driver information', () => {
     const output = generateSarifReport(mockReport);
     const parsed = JSON.parse(output);
-    const driver = parsed.runs[0].tool.driver;
+    const { driver } = parsed.runs[0].tool;
     expect(driver.name).toBe('graphql-sentinel');
     expect(driver.version).toBe('0.1.0');
     expect(driver.informationUri).toContain('graphql-sentinel');
@@ -179,7 +179,7 @@ describe('SARIF Reporter', () => {
   it('should include rules for all check results', () => {
     const output = generateSarifReport(mockReport);
     const parsed = JSON.parse(output);
-    const rules = parsed.runs[0].tool.driver.rules;
+    const { rules } = parsed.runs[0].tool.driver;
     expect(rules).toHaveLength(3);
     expect(rules[0].id).toBe('introspection');
     expect(rules[1].id).toBe('depth-limit');
@@ -188,8 +188,9 @@ describe('SARIF Reporter', () => {
   it('should only include failed results in results array', () => {
     const output = generateSarifReport(mockReport);
     const parsed = JSON.parse(output);
-    const results = parsed.runs[0].results;
-    // mockReport has 2 failed results (introspection and depth-limit)
+    const [run] = parsed.runs;
+    const { results } = run;
+    // mockReport has 2 failed results (introspection and depth-limit).
     expect(results).toHaveLength(2);
     expect(results[0].ruleId).toBe('introspection');
     expect(results[1].ruleId).toBe('depth-limit');
@@ -198,7 +199,8 @@ describe('SARIF Reporter', () => {
   it('should map severity to SARIF levels correctly', () => {
     const output = generateSarifReport(mockReport);
     const parsed = JSON.parse(output);
-    const results = parsed.runs[0].results;
+    const [run] = parsed.runs;
+    const { results } = run;
     // introspection is medium -> warning
     expect(results[0].level).toBe('warning');
     // depth-limit is high -> error
@@ -208,7 +210,8 @@ describe('SARIF Reporter', () => {
   it('should include location with target URI', () => {
     const output = generateSarifReport(mockReport);
     const parsed = JSON.parse(output);
-    const results = parsed.runs[0].results;
+    const [run] = parsed.runs;
+    const { results } = run;
     expect(results[0].locations[0].physicalLocation.artifactLocation.uri).toBe(
       'http://localhost:4000/graphql',
     );
@@ -217,7 +220,8 @@ describe('SARIF Reporter', () => {
   it('should include remediation as fix descriptions', () => {
     const output = generateSarifReport(mockReport);
     const parsed = JSON.parse(output);
-    const results = parsed.runs[0].results;
+    const [run] = parsed.runs;
+    const { results } = run;
     expect(results[0].fixes).toBeDefined();
     expect(results[0].fixes[0].description.text).toContain('Disable introspection');
   });
@@ -225,7 +229,7 @@ describe('SARIF Reporter', () => {
   it('should include security and graphql tags', () => {
     const output = generateSarifReport(mockReport);
     const parsed = JSON.parse(output);
-    const rules = parsed.runs[0].tool.driver.rules;
+    const { rules } = parsed.runs[0].tool.driver;
     expect(rules[0].properties.tags).toContain('security');
     expect(rules[0].properties.tags).toContain('graphql');
   });
@@ -233,8 +237,14 @@ describe('SARIF Reporter', () => {
   it('should handle report with no failures', () => {
     const allPassedReport: ScanReport = {
       ...mockReport,
-      results: [{ ...mockReport.results[2] }], // only the passing one
-      summary: { total: 1, passed: 1, failed: 0, bySeverity: { critical: 0, high: 0, medium: 0, low: 0, info: 0 } },
+      // Keep only the passing result.
+      results: [{ ...mockReport.results[2] }],
+      summary: {
+        bySeverity: { critical: 0, high: 0, info: 0, low: 0, medium: 0 },
+        failed: 0,
+        passed: 1,
+        total: 1,
+      },
     };
     const output = generateSarifReport(allPassedReport);
     const parsed = JSON.parse(output);
@@ -258,31 +268,19 @@ describe('Dashboard Reporter', () => {
     expect(output).toContain('Security Posture');
   });
 
-  it('should include executive summary', () => {
+  it.each([
+    ['executive summary', ['Executive Summary', 'localhost:4000']],
+    ['category breakdown', ['Category Breakdown', 'Information Disclosure', 'Authorization']],
+    [
+      'check details with expandable sections',
+      ['Check Details', 'Introspection Enabled', 'No Query Depth Limit', 'toggleCheck'],
+    ],
+    ['remediation for failed checks', ['Remediation', 'Disable introspection']],
+  ])('should include %s', (_label, expectedContent) => {
     const output = generateDashboard([mockReport]);
-    expect(output).toContain('Executive Summary');
-    expect(output).toContain('localhost:4000');
-  });
-
-  it('should include category breakdown', () => {
-    const output = generateDashboard([mockReport]);
-    expect(output).toContain('Category Breakdown');
-    expect(output).toContain('Information Disclosure');
-    expect(output).toContain('Authorization');
-  });
-
-  it('should include check details with expandable sections', () => {
-    const output = generateDashboard([mockReport]);
-    expect(output).toContain('Check Details');
-    expect(output).toContain('Introspection Enabled');
-    expect(output).toContain('No Query Depth Limit');
-    expect(output).toContain('toggleCheck');
-  });
-
-  it('should include remediation for failed checks', () => {
-    const output = generateDashboard([mockReport]);
-    expect(output).toContain('Remediation');
-    expect(output).toContain('Disable introspection');
+    for (const expected of expectedContent) {
+      expect(output).toContain(expected);
+    }
   });
 
   it('should have dark theme styling', () => {
@@ -317,16 +315,13 @@ describe('Dashboard Reporter', () => {
 
 describe('calculatePostureScore', () => {
   it('should return 100 for all passed checks', () => {
-    const results = [
-      { ...mockReport.results[2] }, // passed
-    ];
+    // Use the passing result only.
+    const results = [{ ...mockReport.results[2] }];
     expect(calculatePostureScore(results)).toBe(100);
   });
 
   it('should return 0 for all failed critical checks', () => {
-    const results = [
-      { ...mockReport.results[0], severity: 'critical' as const, passed: false },
-    ];
+    const results = [{ ...mockReport.results[0], passed: false, severity: 'critical' as const }];
     expect(calculatePostureScore(results)).toBe(0);
   });
 
@@ -337,8 +332,8 @@ describe('calculatePostureScore', () => {
   it('should weight severity correctly', () => {
     // One high failed, one low passed
     const results = [
-      { ...mockReport.results[0], severity: 'high' as const, passed: false },
-      { ...mockReport.results[2], severity: 'low' as const, passed: true },
+      { ...mockReport.results[0], passed: false, severity: 'high' as const },
+      { ...mockReport.results[2], passed: true, severity: 'low' as const },
     ];
     const score = calculatePostureScore(results);
     // high weight = 20, low weight = 5, total = 25, failed = 20
@@ -349,8 +344,8 @@ describe('calculatePostureScore', () => {
   it('should generate timeline SVG for multiple reports', () => {
     const report2: ScanReport = {
       ...mockReport,
+      summary: { ...mockReport.summary, failed: 1, passed: 2 },
       timestamp: '2024-02-15T10:30:00.000Z',
-      summary: { ...mockReport.summary, passed: 2, failed: 1 },
     };
     const output = generateDashboard([mockReport, report2]);
     expect(output).toContain('Vulnerability Timeline');

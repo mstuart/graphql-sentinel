@@ -1,30 +1,37 @@
 import type { ScanReport, ScanResult, Severity } from '../types/index.js';
 
-function severityColor(severity: Severity): string {
+const severityColor = (severity: Severity): string => {
   switch (severity) {
-    case 'critical':
+    case 'critical': {
       return '#dc2626';
-    case 'high':
+    }
+    case 'high': {
       return '#ea580c';
-    case 'medium':
+    }
+    case 'medium': {
       return '#ca8a04';
-    case 'low':
+    }
+    case 'low': {
       return '#2563eb';
-    case 'info':
+    }
+    case 'info': {
       return '#6b7280';
+    }
+    default: {
+      return '#6b7280';
+    }
   }
-}
+};
 
-function escapeHtml(text: string): string {
-  return text
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;');
-}
+const escapeHtml = (text: string): string =>
+  text
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#039;');
 
-function renderResult(result: ScanResult, index: number): string {
+const renderResult = (result: ScanResult, index: number): string => {
   const color = severityColor(result.severity);
   const statusClass = result.passed ? 'pass' : 'fail';
 
@@ -38,19 +45,19 @@ function renderResult(result: ScanResult, index: number): string {
       <div class="result-body">
         <p class="description">${escapeHtml(result.description)}</p>
         ${
-          !result.passed
-            ? `<details id="details-${index}">
+          result.passed
+            ? ''
+            : `<details id="details-${index}">
             <summary>Remediation</summary>
             <p class="remediation">${escapeHtml(result.remediation)}</p>
           </details>`
-            : ''
         }
       </div>
     </div>`;
-}
+};
 
-export function generateHtmlReport(report: ScanReport): string {
-  const results = report.results.map((r, i) => renderResult(r, i)).join('\n');
+export const generateHtmlReport = (report: ScanReport): string => {
+  const results = report.results.map((r, index) => renderResult(r, index)).join('\n');
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -125,7 +132,7 @@ export function generateHtmlReport(report: ScanReport): string {
         report.summary.failed > 0
           ? `<div class="severity-counts">
           ${Object.entries(report.summary.bySeverity)
-            .filter(([_, count]) => count > 0)
+            .filter(([, count]) => count > 0)
             .map(
               ([severity, count]) =>
                 `<span class="severity-count" style="background-color: ${severityColor(severity as Severity)}">${severity}: ${count}</span>`,
@@ -146,4 +153,4 @@ export function generateHtmlReport(report: ScanReport): string {
   </script>
 </body>
 </html>`;
-}
+};

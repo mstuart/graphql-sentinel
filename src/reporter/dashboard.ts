@@ -1,42 +1,46 @@
 import type { ScanReport, ScanResult, Severity } from '../types/index.js';
 
-function escapeHtml(text: string): string {
-  return text
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;');
-}
+const escapeHtml = (text: string): string =>
+  text
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#039;');
 
 const SEVERITY_WEIGHTS: Record<Severity, number> = {
   critical: 25,
   high: 20,
-  medium: 10,
-  low: 5,
   info: 1,
+  low: 5,
+  medium: 10,
 };
 
 const SEVERITY_COLORS: Record<Severity, string> = {
   critical: '#dc2626',
   high: '#ea580c',
-  medium: '#ca8a04',
-  low: '#2563eb',
   info: '#6b7280',
+  low: '#2563eb',
+  medium: '#ca8a04',
 };
+
+const INFORMATION_DISCLOSURE = 'Information Disclosure';
+const DENIAL_OF_SERVICE = 'Denial of Service';
 
 const CATEGORY_MAP: Record<string, string> = {
-  introspection: 'Information Disclosure',
-  'field-suggestion': 'Information Disclosure',
-  'depth-limit': 'Denial of Service',
-  'batch-attack': 'Denial of Service',
-  'alias-overloading': 'Denial of Service',
-  csrf: 'Authorization',
+  'alias-overloading': DENIAL_OF_SERVICE,
   'auth-bypass': 'Authorization',
+  'batch-attack': DENIAL_OF_SERVICE,
+  csrf: 'Authorization',
+  'depth-limit': DENIAL_OF_SERVICE,
+  'field-suggestion': INFORMATION_DISCLOSURE,
+  introspection: INFORMATION_DISCLOSURE,
 };
 
-export function calculatePostureScore(results: ScanResult[]): number {
-  if (results.length === 0) return 100;
+export const calculatePostureScore = (results: ScanResult[]): number => {
+  if (results.length === 0) {
+    return 100;
+  }
 
   let totalWeight = 0;
   let failedWeight = 0;
@@ -49,54 +53,74 @@ export function calculatePostureScore(results: ScanResult[]): number {
     }
   }
 
-  if (totalWeight === 0) return 100;
+  if (totalWeight === 0) {
+    return 100;
+  }
   const score = Math.round(((totalWeight - failedWeight) / totalWeight) * 100);
   return Math.max(0, Math.min(100, score));
-}
+};
 
-function getScoreColor(score: number): string {
-  if (score >= 80) return '#22c55e';
-  if (score >= 60) return '#ca8a04';
-  if (score >= 40) return '#ea580c';
+const getScoreColor = (score: number): string => {
+  if (score >= 80) {
+    return '#22c55e';
+  }
+  if (score >= 60) {
+    return '#ca8a04';
+  }
+  if (score >= 40) {
+    return '#ea580c';
+  }
   return '#dc2626';
-}
+};
 
-function getScoreLabel(score: number): string {
-  if (score >= 90) return 'Excellent';
-  if (score >= 80) return 'Good';
-  if (score >= 60) return 'Fair';
-  if (score >= 40) return 'Poor';
+const getScoreLabel = (score: number): string => {
+  if (score >= 90) {
+    return 'Excellent';
+  }
+  if (score >= 80) {
+    return 'Good';
+  }
+  if (score >= 60) {
+    return 'Fair';
+  }
+  if (score >= 40) {
+    return 'Poor';
+  }
   return 'Critical';
-}
+};
 
-function generateExecutiveSummary(report: ScanReport, score: number): string {
+const generateExecutiveSummary = (report: ScanReport, score: number): string => {
   const { summary } = report;
-  const criticalHigh =
-    (summary.bySeverity.critical || 0) + (summary.bySeverity.high || 0);
 
   if (score >= 90) {
     return `The GraphQL endpoint at ${escapeHtml(report.target)} demonstrates strong security posture with a score of ${score}/100. All ${summary.total} security checks were evaluated, with ${summary.passed} passing. No critical remediation is required at this time.`;
   }
+  const criticalHigh = (summary.bySeverity.critical || 0) + (summary.bySeverity.high || 0);
   if (score >= 60) {
-    return `The GraphQL endpoint at ${escapeHtml(report.target)} has a moderate security posture with a score of ${score}/100. Out of ${summary.total} checks, ${summary.failed} issues were identified. ${criticalHigh > 0 ? `${criticalHigh} high-severity issue(s) require immediate attention.` : 'Issues found are of moderate severity and should be addressed in the near term.'}`;
+    const urgency =
+      criticalHigh > 0
+        ? `${criticalHigh} high-severity issue(s) require immediate attention.`
+        : 'Issues found are of moderate severity and should be addressed in the near term.';
+    return `The GraphQL endpoint at ${escapeHtml(report.target)} has a moderate security posture with a score of ${score}/100. Out of ${summary.total} checks, ${summary.failed} issues were identified. ${urgency}`;
   }
   return `The GraphQL endpoint at ${escapeHtml(report.target)} requires immediate security attention with a score of ${score}/100. ${summary.failed} out of ${summary.total} checks failed, including ${criticalHigh} high or critical severity issue(s). Immediate remediation is strongly recommended to protect against known attack vectors.`;
-}
+};
 
-function generateCategoryBreakdown(results: ScanResult[]): Record<string, ScanResult[]> {
+const generateCategoryBreakdown = (results: ScanResult[]): Record<string, ScanResult[]> => {
   const categories: Record<string, ScanResult[]> = {};
   for (const result of results) {
     const category = CATEGORY_MAP[result.check] || 'Other';
-    if (!categories[category]) {
-      categories[category] = [];
-    }
-    categories[category].push(result);
+    const categoryResults = categories[category] ?? [];
+    categoryResults.push(result);
+    categories[category] = categoryResults;
   }
   return categories;
-}
+};
 
-function generateTimelineSvg(reports: ScanReport[]): string {
-  if (reports.length < 2) return '';
+const generateTimelineSvg = (reports: ScanReport[]): string => {
+  if (reports.length < 2) {
+    return '';
+  }
 
   const width = 600;
   const height = 200;
@@ -108,18 +132,16 @@ function generateTimelineSvg(reports: ScanReport[]): string {
   const maxScore = 100;
   const minScore = 0;
 
-  const points = scores.map((score, i) => {
-    const x = padding + (i / (scores.length - 1)) * chartWidth;
+  const points = scores.map((score, index) => {
+    const x = padding + (index / (scores.length - 1)) * chartWidth;
     const y = padding + chartHeight - ((score - minScore) / (maxScore - minScore)) * chartHeight;
-    return { x, y, score };
+    return { score, x, y };
   });
 
-  const pathData = points
-    .map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`)
-    .join(' ');
+  const pathData = points.map((p, index) => `${index === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ');
 
-  const labels = reports.map((r, i) => {
-    const x = padding + (i / (reports.length - 1)) * chartWidth;
+  const labels = reports.map((r, index) => {
+    const x = padding + (index / (reports.length - 1)) * chartWidth;
     const date = new Date(r.timestamp);
     const label = `${date.getMonth() + 1}/${date.getDate()}`;
     return `<text x="${x}" y="${height - 5}" text-anchor="middle" fill="#94a3b8" font-size="10">${label}</text>`;
@@ -146,9 +168,9 @@ function generateTimelineSvg(reports: ScanReport[]): string {
       ${dots.join('\n')}
       ${labels.join('\n')}
     </svg>`;
-}
+};
 
-function renderCheckDetail(result: ScanResult, index: number): string {
+const renderCheckDetail = (result: ScanResult, index: number): string => {
   const color = SEVERITY_COLORS[result.severity];
   const statusClass = result.passed ? 'pass' : 'fail';
   const category = CATEGORY_MAP[result.check] || 'Other';
@@ -164,20 +186,17 @@ function renderCheckDetail(result: ScanResult, index: number): string {
       </div>
       <div class="check-details" id="check-${index}" style="display:none;">
         <p class="check-desc">${escapeHtml(result.description)}</p>
-        ${!result.passed ? `<div class="remediation-box"><strong>Remediation:</strong> ${escapeHtml(result.remediation)}</div>` : ''}
+        ${result.passed ? '' : `<div class="remediation-box"><strong>Remediation:</strong> ${escapeHtml(result.remediation)}</div>`}
       </div>
     </div>`;
-}
+};
 
-export function generateDashboard(
-  reports: ScanReport[],
-  config?: { title?: string },
-): string {
-  if (reports.length === 0) {
+export const generateDashboard = (reports: ScanReport[], config?: { title?: string }): string => {
+  const latestReport = reports.at(-1);
+  if (!latestReport) {
     return '<html><body>No reports provided</body></html>';
   }
 
-  const latestReport = reports[reports.length - 1];
   const score = calculatePostureScore(latestReport.results);
   const scoreColor = getScoreColor(score);
   const scoreLabel = getScoreLabel(score);
@@ -186,9 +205,7 @@ export function generateDashboard(
   const timelineSvg = generateTimelineSvg(reports);
   const title = config?.title || 'GraphQL Sentinel Security Dashboard';
 
-  const checkCards = latestReport.results
-    .map((r, i) => renderCheckDetail(r, i))
-    .join('\n');
+  const checkCards = latestReport.results.map((r, index) => renderCheckDetail(r, index)).join('\n');
 
   const categoryCards = Object.entries(categories)
     .map(([cat, results]) => {
@@ -210,7 +227,7 @@ export function generateDashboard(
     .join('\n');
 
   const severityCounts = Object.entries(latestReport.summary.bySeverity)
-    .filter(([_, count]) => count > 0)
+    .filter(([, count]) => count > 0)
     .map(
       ([sev, count]) =>
         `<span class="sev-count" style="background:${SEVERITY_COLORS[sev as Severity]}">${sev}: ${count}</span>`,
@@ -305,11 +322,15 @@ export function generateDashboard(
       </div>
     </div>
 
-    ${timelineSvg ? `
+    ${
+      timelineSvg
+        ? `
     <div class="card timeline-card">
       <div class="section-title">Vulnerability Timeline</div>
       ${timelineSvg}
-    </div>` : ''}
+    </div>`
+        : ''
+    }
 
     <div class="section-title">Category Breakdown</div>
     <div class="cat-grid">
@@ -337,11 +358,11 @@ export function generateDashboard(
       try{
         var key='graphql-sentinel-history';
         var current=${JSON.stringify({
+          failed: latestReport.summary.failed,
+          passed: latestReport.summary.passed,
+          score,
           target: latestReport.target,
           timestamp: latestReport.timestamp,
-          score: score,
-          passed: latestReport.summary.passed,
-          failed: latestReport.summary.failed,
           total: latestReport.summary.total,
         })};
         var history=JSON.parse(localStorage.getItem(key)||'[]');
@@ -357,4 +378,4 @@ export function generateDashboard(
   </script>
 </body>
 </html>`;
-}
+};

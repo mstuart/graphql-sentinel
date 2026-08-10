@@ -1,33 +1,33 @@
 version: 2
 updates:
-  - package-ecosystem: "npm"
-    directory: "/"
+  - package-ecosystem: 'npm'
+    directory: '/'
     schedule:
-      interval: "weekly"
+      interval: 'weekly'
     groups:
       development-dependencies:
-        dependency-type: "development"
+        dependency-type: 'development'
     ignore:
       # @typescript-eslint/eslint-plugin peers on typescript ">=4.8.4 <6.1.0".
       # A major bump to TS 7 makes `npm ci` fail with ERESOLVE. Revisit when
       # typescript-eslint ships TS 7 support.
-      - dependency-name: "typescript"
-        update-types: ["version-update:semver-major"]
+      - dependency-name: 'typescript'
+        update-types: ['version-update:semver-major']
       # graphql 17 is not yet supported by the surrounding ecosystem:
       # graphql-request peers on "14 - 16", graphql-yoga on "^15.2.0 || ^16.0.0".
       # Revisit once those ship v17-compatible releases.
-      - dependency-name: "graphql"
-        update-types: ["version-update:semver-major"]
+      - dependency-name: 'graphql'
+        update-types: ['version-update:semver-major']
     commit-message:
-      prefix: "fix"
-      prefix-development: "chore"
-  - package-ecosystem: "github-actions"
-    directory: "/"
+      prefix: 'fix'
+      prefix-development: 'chore'
+  - package-ecosystem: 'github-actions'
+    directory: '/'
     schedule:
-      interval: "weekly"
+      interval: 'weekly'
     groups:
       github-actions:
         patterns:
-          - "*"
+          - '*'
     commit-message:
-      prefix: "chore"
+      prefix: 'chore'

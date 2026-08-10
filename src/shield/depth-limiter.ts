@@ -1,11 +1,13 @@
-import type { ASTVisitor, ValidationContext } from 'graphql';
 import { GraphQLError } from 'graphql';
+import type { ASTVisitor, ValidationContext } from 'graphql';
 
-export function createDepthLimitRule(maxDepth: number = 10) {
-  return function DepthLimitRule(context: ValidationContext): ASTVisitor {
+export const createDepthLimitRule = (maxDepth = 10) =>
+  function DepthLimitRule(context: ValidationContext): ASTVisitor {
     return {
       Document: {
         enter(node) {
+          // The recursive measurement helper is kept below the visitor factory.
+          // eslint-disable-next-line @typescript-eslint/no-use-before-define
           const depth = measureDepth(node);
           if (depth > maxDepth) {
             context.reportError(
@@ -18,14 +20,17 @@ export function createDepthLimitRule(maxDepth: number = 10) {
       },
     };
   };
-}
 
-function measureDepth(node: { kind: string; selectionSet?: unknown; selections?: unknown[] } | Record<string, unknown>, currentDepth: number = 0): number {
+const measureDepth = (
+  node: Record<string, unknown> | { kind: string; selectionSet?: unknown; selections?: unknown[] },
+  currentDepth = 0,
+): number => {
   if (!node || typeof node !== 'object') {
     return currentDepth;
   }
 
-  const selectionSet = (node as Record<string, unknown>).selectionSet as { selections?: unknown[] } | undefined;
+  const selectionSet = (node as Record<string, unknown>).selectionSet as
+    { selections?: unknown[] } | undefined;
   if (selectionSet && Array.isArray(selectionSet.selections)) {
     let maxChildDepth = currentDepth + 1;
     for (const selection of selectionSet.selections) {
@@ -40,15 +45,15 @@ function measureDepth(node: { kind: string; selectionSet?: unknown; selections?:
   // Check definitions (Document node)
   const definitions = (node as Record<string, unknown>).definitions as unknown[] | undefined;
   if (Array.isArray(definitions)) {
-    let maxDefDepth = 0;
-    for (const def of definitions) {
-      const defDepth = measureDepth(def as Record<string, unknown>, 0);
-      if (defDepth > maxDefDepth) {
-        maxDefDepth = defDepth;
+    let maxDefinitionDepth = 0;
+    for (const definition of definitions) {
+      const definitionDepth = measureDepth(definition as Record<string, unknown>, 0);
+      if (definitionDepth > maxDefinitionDepth) {
+        maxDefinitionDepth = definitionDepth;
       }
     }
-    return maxDefDepth;
+    return maxDefinitionDepth;
   }
 
   return currentDepth;
-}
+};
