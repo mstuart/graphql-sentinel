@@ -1,5 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import type { Severity, ScanResult, ScanReport, ScannerConfig, ShieldConfig } from '../../src/types/index.js';
+import type {
+  Severity,
+  ScanResult,
+  ScanReport,
+  ScannerConfig,
+  ShieldConfig,
+} from '../../src/types/index.js';
 
 describe('Types', () => {
   it('should define Severity type correctly', () => {
@@ -10,50 +16,81 @@ describe('Types', () => {
   it('should define ScanResult interface', () => {
     const result: ScanResult = {
       check: 'test-check',
-      severity: 'high',
-      passed: true,
-      title: 'Test Check',
       description: 'A test check',
+      passed: true,
       remediation: 'No action needed',
+      severity: 'high',
+      title: 'Test Check',
     };
-    expect(result.check).toBe('test-check');
-    expect(result.passed).toBe(true);
+    expect(result).toEqual({
+      check: 'test-check',
+      description: 'A test check',
+      passed: true,
+      remediation: 'No action needed',
+      severity: 'high',
+      title: 'Test Check',
+    });
   });
 
   it('should define ScanReport interface', () => {
     const report: ScanReport = {
-      target: 'http://localhost:4000/graphql',
-      timestamp: new Date().toISOString(),
       duration: 1000,
       results: [],
       summary: {
-        total: 0,
-        passed: 0,
+        bySeverity: { critical: 0, high: 0, info: 0, low: 0, medium: 0 },
         failed: 0,
-        bySeverity: { critical: 0, high: 0, medium: 0, low: 0, info: 0 },
+        passed: 0,
+        total: 0,
       },
+      target: 'http://localhost:4000/graphql',
+      timestamp: (() => {
+        const timestamp = new Date();
+        return timestamp.toISOString();
+      })(),
     };
-    expect(report.target).toBe('http://localhost:4000/graphql');
+    expect(report).toEqual({
+      duration: 1000,
+      results: [],
+      summary: {
+        bySeverity: { critical: 0, high: 0, info: 0, low: 0, medium: 0 },
+        failed: 0,
+        passed: 0,
+        total: 0,
+      },
+      target: 'http://localhost:4000/graphql',
+      timestamp: report.timestamp,
+    });
   });
 
   it('should define ScannerConfig interface', () => {
     const config: ScannerConfig = {
+      checks: ['introspection'],
       endpoint: 'http://localhost:4000/graphql',
       headers: { Authorization: 'Bearer token' },
-      checks: ['introspection'],
       timeout: 5000,
     };
-    expect(config.endpoint).toBe('http://localhost:4000/graphql');
+    expect(config).toEqual({
+      checks: ['introspection'],
+      endpoint: 'http://localhost:4000/graphql',
+      headers: { Authorization: 'Bearer token' },
+      timeout: 5000,
+    });
   });
 
   it('should define ShieldConfig interface', () => {
     const config: ShieldConfig = {
-      maxDepth: 10,
-      maxComplexity: 1000,
-      maxAliases: 15,
       disableIntrospection: true,
-      rateLimit: { window: 60000, max: 100 },
+      maxAliases: 15,
+      maxComplexity: 1000,
+      maxDepth: 10,
+      rateLimit: { max: 100, window: 60_000 },
     };
-    expect(config.maxDepth).toBe(10);
+    expect(config).toEqual({
+      disableIntrospection: true,
+      maxAliases: 15,
+      maxComplexity: 1000,
+      maxDepth: 10,
+      rateLimit: { max: 100, window: 60_000 },
+    });
   });
 });

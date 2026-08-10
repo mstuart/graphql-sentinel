@@ -1,30 +1,33 @@
-import type { ScannerConfig, ScanReport, ScanResult, Severity } from '../types/index.js';
+import { setTimeout as delay } from 'node:timers/promises';
 import { getChecks } from './checks/index.js';
+import type { ScannerConfig, ScanReport, ScanResult, Severity } from '../types/index.js';
 
-export async function runScan(config: ScannerConfig): Promise<ScanReport> {
-  const { endpoint, headers, checks: checkNames, timeout = 10000 } = config;
+const rejectAfter = async (timeout: number, checkName: string): Promise<never> => {
+  await delay(timeout, undefined, { ref: false });
+  throw new Error(`Check '${checkName}' timed out`);
+};
+
+export const runScan = async (config: ScannerConfig): Promise<ScanReport> => {
+  const { endpoint, headers, checks: checkNames, timeout = 10_000 } = config;
   const checks = getChecks(checkNames);
   const startTime = Date.now();
 
   const results: ScanResult[] = await Promise.all(
     checks.map(async (check) => {
       try {
-        const result = await Promise.race<ScanResult>([
+        return await Promise.race<ScanResult>([
           check.run(endpoint, headers),
-          new Promise<ScanResult>((_, reject) =>
-            setTimeout(() => reject(new Error(`Check '${check.name}' timed out`)), timeout),
-          ),
+          rejectAfter(timeout, check.name),
         ]);
-        return result;
       } catch (error) {
         return {
           check: check.name,
-          severity: check.severity,
-          passed: true,
-          title: `Check ${check.name}`,
           description: `Check failed to execute: ${String(error)}`,
-          remediation: 'Retry the scan or check endpoint availability.',
           details: { error: String(error) },
+          passed: true,
+          remediation: 'Retry the scan or check endpoint availability.',
+          severity: check.severity,
+          title: `Check ${check.name}`,
         };
       }
     }),
@@ -35,26 +38,28 @@ export async function runScan(config: ScannerConfig): Promise<ScanReport> {
   const bySeverity: Record<Severity, number> = {
     critical: 0,
     high: 0,
-    medium: 0,
-    low: 0,
     info: 0,
+    low: 0,
+    medium: 0,
   };
 
   const failed = results.filter((r) => !r.passed);
   for (const result of failed) {
-    bySeverity[result.severity]++;
+    bySeverity[result.severity] += 1;
   }
 
+  const completedAt = new Date();
+
   return {
-    target: endpoint,
-    timestamp: new Date().toISOString(),
     duration,
     results,
     summary: {
-      total: results.length,
-      passed: results.filter((r) => r.passed).length,
-      failed: failed.length,
       bySeverity,
+      failed: failed.length,
+      passed: results.filter((r) => r.passed).length,
+      total: results.length,
     },
+    target: endpoint,
+    timestamp: completedAt.toISOString(),
   };
-}
+};

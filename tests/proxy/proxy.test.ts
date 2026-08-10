@@ -1,7 +1,8 @@
+import { once } from 'node:events';
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import http from 'node:http';
 import { createProxyServer } from '../../src/proxy/server.js';
 import { startServer, stopServer } from '../scanner/mock-server.js';
+import type http from 'node:http';
 
 describe('Proxy Server', () => {
   let upstreamServer: http.Server;
@@ -12,27 +13,26 @@ describe('Proxy Server', () => {
   beforeAll(async () => {
     // Start upstream mock server
     const result = await startServer({
-      introspectionEnabled: true,
       batchEnabled: true,
       getQueriesEnabled: true,
+      introspectionEnabled: true,
     });
     upstreamServer = result.server;
     upstreamUrl = result.url;
 
     // Start proxy server
     proxyServer = createProxyServer({
-      target: upstreamUrl,
       port: 0,
       shield: {
-        maxDepth: 5,
-        maxAliases: 10,
         disableIntrospection: true,
+        maxAliases: 10,
+        maxDepth: 5,
       },
+      target: upstreamUrl,
     });
 
-    await new Promise<void>((resolve) => {
-      proxyServer.listen(0, () => resolve());
-    });
+    proxyServer.listen(0);
+    await once(proxyServer, 'listening');
 
     const addr = proxyServer.address();
     if (addr && typeof addr === 'object') {
@@ -41,17 +41,17 @@ describe('Proxy Server', () => {
   });
 
   afterAll(async () => {
-    await new Promise<void>((resolve) => {
-      proxyServer.close(() => resolve());
-    });
+    const closed = once(proxyServer, 'close');
+    proxyServer.close();
+    await closed;
     await stopServer(upstreamServer);
   });
 
   it('should forward valid queries to upstream', async () => {
     const response = await fetch(proxyUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ query: '{ __typename }' }),
+      headers: { 'Content-Type': 'application/json' },
+      method: 'POST',
     });
 
     expect(response.status).toBe(200);
@@ -62,9 +62,9 @@ describe('Proxy Server', () => {
 
   it('should block introspection queries', async () => {
     const response = await fetch(proxyUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ query: '{ __schema { types { name } } }' }),
+      headers: { 'Content-Type': 'application/json' },
+      method: 'POST',
     });
 
     expect(response.status).toBe(400);
@@ -75,11 +75,11 @@ describe('Proxy Server', () => {
   });
 
   it('should block queries exceeding alias limit', async () => {
-    const aliases = Array.from({ length: 20 }, (_, i) => `a${i}: __typename`).join(' ');
+    const aliases = Array.from({ length: 20 }, (_, index) => `a${index}: __typename`).join(' ');
     const response = await fetch(proxyUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ query: `{ ${aliases} }` }),
+      headers: { 'Content-Type': 'application/json' },
+      method: 'POST',
     });
 
     expect(response.status).toBe(400);
@@ -98,9 +98,9 @@ describe('Proxy Server', () => {
 
   it('should reject invalid JSON', async () => {
     const response = await fetch(proxyUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: 'not json',
+      headers: { 'Content-Type': 'application/json' },
+      method: 'POST',
     });
 
     expect(response.status).toBe(400);
@@ -110,9 +110,9 @@ describe('Proxy Server', () => {
 
   it('should reject requests without query field', async () => {
     const response = await fetch(proxyUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ variables: {} }),
+      headers: { 'Content-Type': 'application/json' },
+      method: 'POST',
     });
 
     expect(response.status).toBe(400);
@@ -131,9 +131,9 @@ describe('Proxy Server', () => {
 
   it('should return CORS headers on POST responses', async () => {
     const response = await fetch(proxyUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ query: '{ __typename }' }),
+      headers: { 'Content-Type': 'application/json' },
+      method: 'POST',
     });
 
     expect(response.headers.get('access-control-allow-origin')).toBe('*');
@@ -152,16 +152,15 @@ describe('Proxy Server with Rate Limiting', () => {
     upstreamUrl = result.url;
 
     proxyServer = createProxyServer({
-      target: upstreamUrl,
       port: 0,
       shield: {
-        rateLimit: { window: 10000, max: 2 },
+        rateLimit: { max: 2, window: 10_000 },
       },
+      target: upstreamUrl,
     });
 
-    await new Promise<void>((resolve) => {
-      proxyServer.listen(0, () => resolve());
-    });
+    proxyServer.listen(0);
+    await once(proxyServer, 'listening');
 
     const addr = proxyServer.address();
     if (addr && typeof addr === 'object') {
@@ -170,33 +169,33 @@ describe('Proxy Server with Rate Limiting', () => {
   });
 
   afterAll(async () => {
-    await new Promise<void>((resolve) => {
-      proxyServer.close(() => resolve());
-    });
+    const closed = once(proxyServer, 'close');
+    proxyServer.close();
+    await closed;
     await stopServer(upstreamServer);
   });
 
   it('should enforce rate limiting', async () => {
     // First two requests should succeed
     const r1 = await fetch(proxyUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ query: '{ __typename }' }),
+      headers: { 'Content-Type': 'application/json' },
+      method: 'POST',
     });
     expect(r1.status).toBe(200);
 
     const r2 = await fetch(proxyUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ query: '{ __typename }' }),
+      headers: { 'Content-Type': 'application/json' },
+      method: 'POST',
     });
     expect(r2.status).toBe(200);
 
     // Third request should be rate limited
     const r3 = await fetch(proxyUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ query: '{ __typename }' }),
+      headers: { 'Content-Type': 'application/json' },
+      method: 'POST',
     });
     expect(r3.status).toBe(429);
     const body = await r3.json();

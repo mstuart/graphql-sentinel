@@ -60,5 +60,5 @@ export interface ShieldConfig {
 export interface SecurityCheck {
   name: string;
   severity: Severity;
-  run(endpoint: string, headers?: Record<string, string>): Promise<ScanResult>;
+  run: (endpoint: string, headers?: Record<string, string>) => Promise<ScanResult>;
 }

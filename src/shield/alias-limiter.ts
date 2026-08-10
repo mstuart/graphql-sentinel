@@ -1,18 +1,11 @@
-import type { ASTVisitor, ValidationContext } from 'graphql';
 import { GraphQLError } from 'graphql';
+import type { ASTVisitor, ValidationContext } from 'graphql';
 
-export function createAliasLimitRule(maxAliases: number = 15) {
-  return function AliasLimitRule(context: ValidationContext): ASTVisitor {
+export const createAliasLimitRule = (maxAliases = 15) =>
+  function AliasLimitRule(context: ValidationContext): ASTVisitor {
     let aliasCount = 0;
 
     return {
-      Field: {
-        enter(node) {
-          if (node.alias) {
-            aliasCount++;
-          }
-        },
-      },
       Document: {
         leave() {
           if (aliasCount > maxAliases) {
@@ -24,6 +17,12 @@ export function createAliasLimitRule(maxAliases: number = 15) {
           }
         },
       },
+      Field: {
+        enter(node) {
+          if (node.alias) {
+            aliasCount += 1;
+          }
+        },
+      },
     };
   };
-}

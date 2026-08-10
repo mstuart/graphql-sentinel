@@ -1,19 +1,20 @@
-import type { ShieldConfig } from '../types/index.js';
 import { createDepthLimitRule } from './depth-limiter.js';
 import { createComplexityRule } from './complexity-analyzer.js';
 import { createAliasLimitRule } from './alias-limiter.js';
 import { createIntrospectionControlRule } from './introspection-control.js';
 import { createRateLimiter } from './rate-limiter.js';
 import { createFieldAuthRule } from './field-auth.js';
+import type { ShieldConfig } from '../types/index.js';
+import type { ASTVisitor, ValidationContext } from 'graphql';
 
-type ValidationRule = (context: import('graphql').ValidationContext) => import('graphql').ASTVisitor;
+type ValidationRule = (context: ValidationContext) => ASTVisitor;
 
 export interface Shield {
   validationRules: ValidationRule[];
   rateLimiter?: ReturnType<typeof createRateLimiter>;
 }
 
-export function createShield(config: ShieldConfig): Shield {
+export const createShield = (config: ShieldConfig): Shield => {
   const validationRules: ValidationRule[] = [];
 
   if (config.maxDepth !== undefined) {
@@ -45,8 +46,8 @@ export function createShield(config: ShieldConfig): Shield {
     rateLimiter = createRateLimiter(config.rateLimit);
   }
 
-  return { validationRules, rateLimiter };
-}
+  return { rateLimiter, validationRules };
+};
 
 export { createDepthLimitRule } from './depth-limiter.js';
 export { createComplexityRule } from './complexity-analyzer.js';

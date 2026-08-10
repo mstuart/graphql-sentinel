@@ -43,6 +43,7 @@ If you discover a security vulnerability, please see [SECURITY.md](.github/SECUR
 ## Reporting Bugs
 
 Please open an issue with:
+
 - Steps to reproduce
 - Expected behavior
 - Actual behavior
