@@ -37,9 +37,13 @@ export interface FieldAuthRule {
 }
 
 export interface FieldAuthConfig {
-  /** Map of TypeName.fieldName -> required roles/permissions */
+  /**
+  Map of TypeName.fieldName -> required roles/permissions
+  */
   rules: Record<string, FieldAuthRule>;
-  /** Function to extract user context from the GraphQL context */
+  /**
+  Function to extract user context from the GraphQL context
+  */
   extractContext?: (context: unknown) => {
     authenticated: boolean;
     roles: string[];
