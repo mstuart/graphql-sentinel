@@ -26,6 +26,19 @@ export default [
           varsIgnorePattern: '^_',
         },
       ],
+      'unicorn/consistent-arrow-return-style': 'off',
+    },
+  },
+  {
+    files: [
+      'src/index.ts',
+      'src/plugins/index.ts',
+      'src/proxy/index.ts',
+      'src/scanner/index.ts',
+      'stylelint.config.mjs',
+    ],
+    rules: {
+      'unicorn/no-barrel-files': 'off',
     },
   },
   {
