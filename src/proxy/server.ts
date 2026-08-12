@@ -5,15 +5,25 @@ import { createShield } from '../shield/index.js';
 import type { ShieldConfig } from '../types/index.js';
 
 export interface ProxyConfig {
-  /** Upstream GraphQL endpoint URL */
+  /**
+  Upstream GraphQL endpoint URL
+  */
   target: string;
-  /** Proxy listening port (default 4000) */
+  /**
+  Proxy listening port (default 4000)
+  */
   port: number;
-  /** Shield configuration for query validation */
+  /**
+  Shield configuration for query validation
+  */
   shield: ShieldConfig;
-  /** Headers to forward to the upstream */
+  /**
+  Headers to forward to the upstream
+  */
   headers?: Record<string, string>;
-  /** Enable CORS headers (default true) */
+  /**
+  Enable CORS headers (default true)
+  */
   cors?: boolean;
 }
 

@@ -1,7 +1,11 @@
 export interface RateLimitConfig {
-  /** Window length in milliseconds. */
+  /**
+  Window length in milliseconds.
+  */
   window: number;
-  /** Maximum cost allowed per window. */
+  /**
+  Maximum cost allowed per window.
+  */
   max: number;
 }
 
