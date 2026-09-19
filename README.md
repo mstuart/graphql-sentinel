@@ -33,7 +33,7 @@ npm install graphql-sentinel graphql
 
 ## Requirements
 
-- Node.js >= 18.0.0
+- Node.js >= 22.0.0
 - `graphql` >= 16.0.0 (peer dependency)
 - `graphql-yoga` >= 5.0.0 (optional, for Yoga plugin)
 - `@apollo/server` >= 4.0.0 (optional, for Apollo plugin)
