@@ -25,6 +25,12 @@ export interface ProxyConfig {
   Enable CORS headers (default true)
   */
   cors?: boolean;
+  /**
+  Trust the leftmost X-Forwarded-For address for rate limiting (default false).
+  Enable only when the proxy is behind a trusted reverse proxy that overwrites
+  this header.
+  */
+  trustProxy?: boolean;
 }
 
 const readBody = async (request: http.IncomingMessage): Promise<string> => {
@@ -123,9 +129,13 @@ export const createProxyServer = (config: ProxyConfig): http.Server => {
 
       // Check rate limiter
       if (shield.rateLimiter) {
+        const forwardedFor = request.headers['x-forwarded-for'];
+        const forwardedClientIp = Array.isArray(forwardedFor)
+          ? forwardedFor[0]
+          : forwardedFor?.split(',', 1)[0]?.trim();
         const clientIp =
-          (request.headers['x-forwarded-for'] as string)?.split(',', 1)[0]?.trim() ||
-          request.socket.remoteAddress ||
+          (config.trustProxy ? forwardedClientIp : undefined) ??
+          request.socket.remoteAddress ??
           'unknown';
         const result = shield.rateLimiter.check(clientIp);
         if (!result.allowed) {

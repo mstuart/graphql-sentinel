@@ -15,6 +15,7 @@ export const createProxyCommand = (): Command => {
     .option('--disable-introspection', 'Block introspection queries')
     .option('--rate-limit-window <ms>', 'Rate limit window in milliseconds')
     .option('--rate-limit-max <max>', 'Maximum requests per window')
+    .option('--trust-proxy', 'Trust X-Forwarded-For from a reverse proxy for client rate limiting')
     .option('-H, --header <header...>', 'Headers to forward to upstream (format: "Key: Value")')
     .option('--no-cors', 'Disable CORS headers')
     .action(
@@ -28,6 +29,7 @@ export const createProxyCommand = (): Command => {
           disableIntrospection?: boolean;
           rateLimitWindow?: string;
           rateLimitMax?: string;
+          trustProxy?: boolean;
           header?: string[];
           cors?: boolean;
         },
@@ -74,6 +76,7 @@ export const createProxyCommand = (): Command => {
             port: Number(options.port),
             shield: shieldConfig,
             target,
+            trustProxy: options.trustProxy,
           });
         } catch (error) {
           console.error(`Failed to start proxy: ${String(error)}`);

@@ -179,14 +179,14 @@ describe('Proxy Server with Rate Limiting', () => {
     // First two requests should succeed
     const r1 = await fetch(proxyUrl, {
       body: JSON.stringify({ query: '{ __typename }' }),
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'X-Forwarded-For': '198.51.100.1' },
       method: 'POST',
     });
     expect(r1.status).toBe(200);
 
     const r2 = await fetch(proxyUrl, {
       body: JSON.stringify({ query: '{ __typename }' }),
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'X-Forwarded-For': '198.51.100.2' },
       method: 'POST',
     });
     expect(r2.status).toBe(200);
@@ -194,7 +194,7 @@ describe('Proxy Server with Rate Limiting', () => {
     // Third request should be rate limited
     const r3 = await fetch(proxyUrl, {
       body: JSON.stringify({ query: '{ __typename }' }),
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'X-Forwarded-For': '198.51.100.3' },
       method: 'POST',
     });
     expect(r3.status).toBe(429);

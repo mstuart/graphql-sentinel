@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import { createProxyCommand } from '../../src/cli/proxy.js';
 import { createScanCommand } from '../../src/cli/scan.js';
 
 describe('CLI Scan Command', () => {
@@ -36,5 +37,13 @@ describe('CLI Scan Command', () => {
     const command = createScanCommand();
     const timeoutOption = command.options.find((o) => o.long === '--timeout');
     expect(timeoutOption).toBeDefined();
+  });
+});
+
+describe('CLI Proxy Command', () => {
+  it('should require an explicit option to trust proxy headers', () => {
+    const command = createProxyCommand();
+    const trustProxyOption = command.options.find((option) => option.long === '--trust-proxy');
+    expect(trustProxyOption).toBeDefined();
   });
 });
