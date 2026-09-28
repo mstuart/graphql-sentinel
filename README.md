@@ -249,6 +249,8 @@ await startProxy({
     rateLimit: { window: 60000, max: 100 },
   },
   headers: { 'X-API-Key': 'upstream-key' },
+  // Only enable behind a trusted reverse proxy that overwrites X-Forwarded-For.
+  trustProxy: true,
 });
 
 // Or get the raw http.Server for custom configuration
@@ -265,7 +267,7 @@ The proxy:
 - Parses and validates all incoming GraphQL queries against shield rules
 - Blocks queries that exceed depth, complexity, or alias limits
 - Blocks introspection queries when configured
-- Enforces rate limiting per client IP
+- Enforces rate limiting per client IP. `X-Forwarded-For` is ignored unless `trustProxy: true` (or CLI `--trust-proxy`) is explicitly enabled.
 - Forwards valid queries to the upstream server
 - Handles CORS headers automatically
 - Returns `400` for blocked queries with detailed error messages
