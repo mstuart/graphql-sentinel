@@ -251,6 +251,8 @@ await startProxy({
   headers: { 'X-API-Key': 'upstream-key' },
   // Only enable behind a trusted reverse proxy that overwrites X-Forwarded-For.
   trustProxy: true,
+  // Reject request bodies larger than 1 MiB by default.
+  maxBodySize: 1024 * 1024,
 });
 
 // Or get the raw http.Server for custom configuration
@@ -458,13 +460,15 @@ const dashboard = generateDashboard([report], { title: 'Security Dashboard' });
 
 ### ProxyConfig
 
-| Option    | Type                     | Default     | Description                    |
-| --------- | ------------------------ | ----------- | ------------------------------ |
-| `target`  | `string`                 | required    | Upstream GraphQL endpoint URL  |
-| `port`    | `number`                 | `4000`      | Proxy listening port           |
-| `shield`  | `ShieldConfig`           | required    | Shield configuration           |
+| Option | Type | Default | Description |
+| --- | --- | --- | --- |
+| `target` | `string` | required | Upstream GraphQL endpoint URL |
+| `port` | `number` | `4000` | Proxy listening port |
+| `shield` | `ShieldConfig` | required | Shield configuration |
 | `headers` | `Record<string, string>` | `undefined` | Headers to forward to upstream |
-| `cors`    | `boolean`                | `true`      | Enable CORS headers            |
+| `cors` | `boolean` | `true` | Enable CORS headers |
+| `trustProxy` | `boolean` | `false` | Trust forwarded client IPs for rate limiting |
+| `maxBodySize` | `number` | `1048576` | Maximum accepted request body size in bytes |
 
 ### FieldAuthConfig
 

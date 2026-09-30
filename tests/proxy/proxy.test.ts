@@ -1,4 +1,5 @@
 import { once } from 'node:events';
+import { request as httpRequest } from 'node:http';
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { createProxyServer } from '../../src/proxy/server.js';
 import { startServer, stopServer } from '../scanner/mock-server.js';
@@ -22,6 +23,7 @@ describe('Proxy Server', () => {
 
     // Start proxy server
     proxyServer = createProxyServer({
+      maxBodySize: 1024,
       port: 0,
       shield: {
         disableIntrospection: true,
@@ -118,6 +120,30 @@ describe('Proxy Server', () => {
     expect(response.status).toBe(400);
     const body = await response.json();
     expect(body.errors[0].message).toContain('Missing or invalid query');
+  });
+
+  it('should reject oversized chunked request bodies', async () => {
+    // A raw request is required to exercise the streaming limit without Content-Length.
+    // eslint-disable-next-line promise/avoid-new
+    const statusCode = await new Promise<number | undefined>((resolve, reject) => {
+      const request = httpRequest(
+        proxyUrl,
+        {
+          headers: { 'Content-Type': 'application/json', 'Transfer-Encoding': 'chunked' },
+          method: 'POST',
+        },
+        (response) => {
+          response.resume();
+          response.on('end', () => resolve(response.statusCode));
+        },
+      );
+      request.on('error', reject);
+      request.write('{"query":"');
+      request.write('x'.repeat(2048));
+      request.end('"}');
+    });
+
+    expect(statusCode).toBe(413);
   });
 
   it('should handle CORS preflight requests', async () => {
