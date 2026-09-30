@@ -1,10 +1,10 @@
 export interface RateLimitConfig {
   /**
-  Window length in milliseconds.
+  Window length in milliseconds. Must be positive and finite.
   */
   window: number;
   /**
-  Maximum cost allowed per window.
+  Maximum cost allowed per window. Must be positive and finite.
   */
   max: number;
 }
@@ -14,12 +14,21 @@ export interface RateLimitResult {
   remaining: number;
 }
 
+const assertPositiveFinite = (value: number, name: string): void => {
+  if (!Number.isFinite(value) || value <= 0) {
+    throw new RangeError(`${name} must be a positive finite number`);
+  }
+};
+
 interface ClientRecord {
   entries: { timestamp: number; cost: number }[];
 }
 
 export const createRateLimiter = (config: RateLimitConfig) => {
   const { window, max } = config;
+  assertPositiveFinite(window, 'window');
+  assertPositiveFinite(max, 'max');
+
   const clients = new Map<string, ClientRecord>();
 
   // Periodic cleanup
@@ -40,6 +49,8 @@ export const createRateLimiter = (config: RateLimitConfig) => {
 
   return {
     check(key: string, cost = 1): RateLimitResult {
+      assertPositiveFinite(cost, 'cost');
+
       const now = Date.now();
 
       let record = clients.get(key);
