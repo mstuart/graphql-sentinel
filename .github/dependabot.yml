@@ -18,6 +18,10 @@ updates:
       # Revisit once those ship v17-compatible releases.
       - dependency-name: 'graphql'
         update-types: ['version-update:semver-major']
+      # eslint-plugin-unicorn 75+ enables rules that require source-wide
+      # rewrites. Keep v74 until those changes can be reviewed separately.
+      - dependency-name: 'eslint-plugin-unicorn'
+        update-types: ['version-update:semver-major']
     commit-message:
       prefix: 'fix'
       prefix-development: 'chore'
