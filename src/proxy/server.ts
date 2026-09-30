@@ -31,12 +31,52 @@ export interface ProxyConfig {
   this header.
   */
   trustProxy?: boolean;
+  /**
+  Maximum accepted request body size in bytes (default 1 MiB).
+  */
+  maxBodySize?: number;
 }
 
-const readBody = async (request: http.IncomingMessage): Promise<string> => {
-  let body = '';
+const DEFAULT_MAX_BODY_SIZE = 1024 * 1024;
+
+const readBody = async (
+  request: http.IncomingMessage,
+  maxBodySize: number,
+): Promise<string | null> => {
+  const chunks: Buffer[] = [];
+  let size = 0;
   for await (const chunk of request) {
-    body += chunk;
+    const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+    size += buffer.byteLength;
+    if (size > maxBodySize) {
+      request.resume();
+      return null;
+    }
+    chunks.push(buffer);
+  }
+  return Buffer.concat(chunks, size).toString();
+};
+
+const writeBodyTooLarge = (response: http.ServerResponse): void => {
+  response.writeHead(413, { 'Content-Type': 'application/json' });
+  response.end(JSON.stringify({ errors: [{ message: 'Request body too large' }] }));
+};
+
+const readAcceptedBody = async (
+  request: http.IncomingMessage,
+  response: http.ServerResponse,
+  maxBodySize: number,
+): Promise<string | null> => {
+  const contentLength = Number(request.headers['content-length']);
+  if (Number.isFinite(contentLength) && contentLength > maxBodySize) {
+    request.resume();
+    writeBodyTooLarge(response);
+    return null;
+  }
+
+  const body = await readBody(request, maxBodySize);
+  if (body === null) {
+    writeBodyTooLarge(response);
   }
   return body;
 };
@@ -47,32 +87,51 @@ const setCorsHeaders = (response: http.ServerResponse): void => {
   response.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 };
 
+const wasRequestHandled = (
+  request: http.IncomingMessage,
+  response: http.ServerResponse,
+  isCorsEnabled: boolean,
+): boolean => {
+  if (isCorsEnabled) {
+    setCorsHeaders(response);
+  }
+
+  if (request.method === 'OPTIONS') {
+    response.writeHead(204);
+    response.end();
+    return true;
+  }
+
+  if (request.method !== 'POST') {
+    response.writeHead(405, { 'Content-Type': 'application/json' });
+    response.end(JSON.stringify({ errors: [{ message: 'Only POST method is allowed' }] }));
+    return true;
+  }
+
+  return false;
+};
+
 export const createProxyServer = (config: ProxyConfig): http.Server => {
   const shield = createShield(config.shield);
   const isEnableCors = config.cors !== false;
+  const maxBodySize = config.maxBodySize ?? DEFAULT_MAX_BODY_SIZE;
+
+  if (!Number.isSafeInteger(maxBodySize) || maxBodySize <= 0) {
+    throw new RangeError('maxBodySize must be a positive safe integer');
+  }
 
   return http.createServer(async (request, response) => {
-    // Handle CORS preflight
-    if (isEnableCors) {
-      setCorsHeaders(response);
-    }
-
-    if (request.method === 'OPTIONS') {
-      response.writeHead(204);
-      response.end();
-      return;
-    }
-
-    if (request.method !== 'POST') {
-      response.writeHead(405, { 'Content-Type': 'application/json' });
-      response.end(JSON.stringify({ errors: [{ message: 'Only POST method is allowed' }] }));
+    if (wasRequestHandled(request, response, isEnableCors)) {
       return;
     }
 
     // This handler must translate every request-stage failure into an HTTP response.
     // eslint-disable-next-line unicorn/try-complexity
     try {
-      const body = await readBody(request);
+      const body = await readAcceptedBody(request, response, maxBodySize);
+      if (body === null) {
+        return;
+      }
       let parsed: { query?: string; variables?: Record<string, unknown>; operationName?: string };
 
       try {
