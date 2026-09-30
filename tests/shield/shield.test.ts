@@ -209,6 +209,21 @@ describe('Rate Limiter', () => {
     expect(result.allowed).toBe(true);
     limiter.destroy();
   });
+
+  it.each([
+    { config: { max: 0, window: 1000 }, name: 'max' },
+    { config: { max: 10, window: 0 }, name: 'window' },
+    { config: { max: NaN, window: 1000 }, name: 'max' },
+    { config: { max: 10, window: Infinity }, name: 'window' },
+  ])('should reject invalid $name configuration', ({ config, name }) => {
+    expect(() => createRateLimiter(config)).toThrow(`${name} must be a positive finite number`);
+  });
+
+  it.each([0, -1, NaN, Infinity])('should reject invalid request cost %s', (cost) => {
+    const limiter = createRateLimiter({ max: 10, window: 1000 });
+    expect(() => limiter.check('client-1', cost)).toThrow('cost must be a positive finite number');
+    limiter.destroy();
+  });
 });
 
 describe('createShield', () => {
