@@ -1,8 +1,12 @@
 import { GraphQLError } from 'graphql';
 import type { ASTVisitor, ValidationContext } from 'graphql';
 
-export const createDepthLimitRule = (maxDepth = 10) =>
-  function DepthLimitRule(context: ValidationContext): ASTVisitor {
+export const createDepthLimitRule = (maxDepth = 10) => {
+  if (!Number.isSafeInteger(maxDepth) || maxDepth <= 0) {
+    throw new RangeError('maxDepth must be a positive safe integer');
+  }
+
+  return function DepthLimitRule(context: ValidationContext): ASTVisitor {
     return {
       Document: {
         enter(node) {
@@ -20,6 +24,7 @@ export const createDepthLimitRule = (maxDepth = 10) =>
       },
     };
   };
+};
 
 const measureDepth = (
   node: Record<string, unknown> | { kind: string; selectionSet?: unknown; selections?: unknown[] },

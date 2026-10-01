@@ -77,6 +77,12 @@ describe('Depth Limiter', () => {
     const errors = validate(testSchema, query, [createDepthLimitRule()]);
     expect(errors).toHaveLength(0);
   });
+
+  it.each([0, -1, 1.5, NaN, Infinity])('should reject invalid max depth %s', (maxDepth) => {
+    expect(() => createDepthLimitRule(maxDepth)).toThrow(
+      'maxDepth must be a positive safe integer',
+    );
+  });
 });
 
 describe('Complexity Analyzer', () => {
@@ -111,6 +117,12 @@ describe('Complexity Analyzer', () => {
     const errors = validate(testSchema, query, [createComplexityRule()]);
     expect(errors).toHaveLength(0);
   });
+
+  it.each([0, -1, NaN, Infinity])('should reject invalid max complexity %s', (maxComplexity) => {
+    expect(() => createComplexityRule({ maxComplexity })).toThrow(
+      'maxComplexity must be a positive finite number',
+    );
+  });
 });
 
 describe('Alias Limiter', () => {
@@ -134,6 +146,12 @@ describe('Alias Limiter', () => {
     const query = parse(`{ ${aliases} }`);
     const errors = validate(testSchema, query, [createAliasLimitRule()]);
     expect(errors).toHaveLength(0);
+  });
+
+  it.each([0, -1, 1.5, NaN, Infinity])('should reject invalid max aliases %s', (maxAliases) => {
+    expect(() => createAliasLimitRule(maxAliases)).toThrow(
+      'maxAliases must be a positive safe integer',
+    );
   });
 });
 
