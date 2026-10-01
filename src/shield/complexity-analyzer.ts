@@ -10,6 +10,10 @@ export interface ComplexityConfig {
 export const createComplexityRule = (config: ComplexityConfig = {}) => {
   const { maxComplexity = 1000, defaultFieldCost = 1, listFieldMultiplier = 10 } = config;
 
+  if (!Number.isFinite(maxComplexity) || maxComplexity <= 0) {
+    throw new RangeError('maxComplexity must be a positive finite number');
+  }
+
   return function ComplexityRule(context: ValidationContext): ASTVisitor {
     let complexity = 0;
     const multiplierStack: number[] = [1];
