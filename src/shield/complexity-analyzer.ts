@@ -1,4 +1,5 @@
 import { GraphQLError } from 'graphql';
+import { measureDocument } from './measure.js';
 import type { ASTVisitor, ValidationContext } from 'graphql';
 
 export interface ComplexityConfig {
@@ -14,13 +15,30 @@ export const createComplexityRule = (config: ComplexityConfig = {}) => {
     throw new RangeError('maxComplexity must be a positive finite number');
   }
 
-  return function ComplexityRule(context: ValidationContext): ASTVisitor {
-    let complexity = 0;
-    const multiplierStack: number[] = [1];
+  const weights = Object.entries({ defaultFieldCost, listFieldMultiplier });
+  for (const [name, value] of weights) {
+    if (!Number.isFinite(value) || value <= 0) {
+      throw new RangeError(`${name} must be a positive finite number`);
+    }
+  }
 
+  return function ComplexityRule(context: ValidationContext): ASTVisitor {
     return {
       Document: {
-        leave() {
+        enter(node) {
+          let complexity: number;
+          try {
+            ({ complexity } = measureDocument(node, context.getSchema(), {
+              defaultFieldCost,
+              listFieldMultiplier,
+            }));
+          } catch (error) {
+            if (!(error instanceof GraphQLError)) {
+              throw error;
+            }
+            context.reportError(error);
+            return;
+          }
           if (complexity > maxComplexity) {
             context.reportError(
               new GraphQLError(
@@ -28,29 +46,6 @@ export const createComplexityRule = (config: ComplexityConfig = {}) => {
               ),
             );
           }
-        },
-      },
-      Field: {
-        enter() {
-          const currentMultiplier = multiplierStack.at(-1) || 1;
-          complexity += defaultFieldCost * currentMultiplier;
-
-          // Check if field returns a list type
-          const fieldDefinition = context.getFieldDef();
-          if (fieldDefinition) {
-            const { type } = fieldDefinition;
-            const typeName = type.toString();
-            if (typeName.startsWith('[')) {
-              multiplierStack.push(currentMultiplier * listFieldMultiplier);
-            } else {
-              multiplierStack.push(currentMultiplier);
-            }
-          } else {
-            multiplierStack.push(currentMultiplier);
-          }
-        },
-        leave() {
-          multiplierStack.pop();
         },
       },
     };
