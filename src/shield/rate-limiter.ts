@@ -32,15 +32,18 @@ export const createRateLimiter = (config: RateLimitConfig) => {
   const clients = new Map<string, ClientRecord>();
 
   // Periodic cleanup
-  const cleanupInterval = setInterval(() => {
-    const now = Date.now();
-    for (const [key, record] of clients) {
-      record.entries = record.entries.filter((entry) => now - entry.timestamp < window);
-      if (record.entries.length === 0) {
-        clients.delete(key);
+  const cleanupInterval = setInterval(
+    () => {
+      const now = Date.now();
+      for (const [key, record] of clients) {
+        record.entries = record.entries.filter((entry) => now - entry.timestamp < window);
+        if (record.entries.length === 0) {
+          clients.delete(key);
+        }
       }
-    }
-  }, window);
+    },
+    Math.min(window, 2_147_483_647),
+  );
 
   // Allow cleanup timer to not prevent process exit
   if (cleanupInterval.unref) {
@@ -86,10 +89,10 @@ export const createRateLimiter = (config: RateLimitConfig) => {
     },
 
     reset(key?: string) {
-      if (key) {
-        clients.delete(key);
-      } else {
+      if (key === undefined) {
         clients.clear();
+      } else {
+        clients.delete(key);
       }
     },
   };
