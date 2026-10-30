@@ -1,6 +1,6 @@
 import { once } from 'node:events';
 import { request as httpRequest } from 'node:http';
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
 import { createProxyServer } from '../../src/proxy/server.js';
 import { startServer, stopServer } from '../scanner/mock-server.js';
 import type http from 'node:http';
@@ -108,6 +108,17 @@ describe('Proxy Server', () => {
     expect(response.status).toBe(400);
     const body = await response.json();
     expect(body.errors[0].message).toContain('Invalid JSON');
+  });
+
+  it('returns a client error for a JSON null request', async () => {
+    const response = await fetch(proxyUrl, {
+      body: 'null',
+      headers: { 'Content-Type': 'application/json' },
+      method: 'POST',
+    });
+    expect(response.status).toBe(400);
+    const body = await response.json();
+    expect(body.errors[0].message).toContain('Missing or invalid query');
   });
 
   it('should reject requests without query field', async () => {
@@ -227,4 +238,27 @@ describe('Proxy Server with Rate Limiting', () => {
     const body = await r3.json();
     expect(body.errors[0].message).toContain('Rate limit');
   });
+});
+
+it('destroys the rate limiter when the proxy closes', async () => {
+  const schedule = vi.spyOn(globalThis, 'setInterval');
+  const clear = vi.spyOn(globalThis, 'clearInterval');
+  const server = createProxyServer({
+    port: 0,
+    shield: { rateLimit: { max: 1, window: 1000 } },
+    target: 'http://localhost:1/graphql',
+  });
+  const timer = schedule.mock.results.at(-1)?.value;
+  try {
+    server.listen(0);
+    await once(server, 'listening');
+    const closed = once(server, 'close');
+    server.close();
+    await closed;
+    expect(clear).toHaveBeenCalledWith(timer);
+  } finally {
+    clearInterval(timer);
+    schedule.mockRestore();
+    clear.mockRestore();
+  }
 });

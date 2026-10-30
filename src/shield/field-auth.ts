@@ -24,13 +24,11 @@ export interface FieldAuthConfig {
 
 export const createFieldAuthRule = (config: FieldAuthConfig) =>
   function FieldAuthRule(context: ValidationContext): ASTVisitor {
-    const typeStack: string[] = [];
-
     return {
       Field: {
         enter(node) {
           const fieldName = node.name.value;
-          const parentType = typeStack.at(-1) || 'Query';
+          const parentType = context.getParentType()?.name ?? 'Query';
           const ruleKey = `${parentType}.${fieldName}`;
 
           const rule = config.rules[ruleKey];
@@ -49,39 +47,6 @@ export const createFieldAuthRule = (config: FieldAuthConfig) =>
               checkRule({ config, context, rule: effectiveRule, ruleKey });
             }
           }
-
-          // Push the type of this field for nested field resolution
-          const fieldDefinition = context.getFieldDef();
-          if (fieldDefinition) {
-            // The recursive unwrapping helper follows the visitor factory.
-            // eslint-disable-next-line @typescript-eslint/no-use-before-define
-            const namedType = getNamedType(fieldDefinition.type);
-            if (namedType && 'name' in namedType) {
-              typeStack.push(namedType.name);
-            }
-          }
-        },
-        leave() {
-          // Pop the type we pushed
-          const fieldDefinition = context.getFieldDef();
-          if (fieldDefinition) {
-            // The recursive unwrapping helper follows the visitor factory.
-            // eslint-disable-next-line @typescript-eslint/no-use-before-define
-            const namedType = getNamedType(fieldDefinition.type);
-            if (namedType && 'name' in namedType) {
-              typeStack.pop();
-            }
-          }
-        },
-      },
-      OperationDefinition: {
-        enter() {
-          const queryType = context.getSchema().getQueryType();
-          // Push root type
-          typeStack.push(queryType?.name || 'Query');
-        },
-        leave() {
-          typeStack.pop();
         },
       },
     };
@@ -148,14 +113,4 @@ const checkRule = ({
       );
     }
   }
-};
-
-const getNamedType = (type: any): any => {
-  if (!type) {
-    return null;
-  }
-  if (type.ofType) {
-    return getNamedType(type.ofType);
-  }
-  return type;
 };

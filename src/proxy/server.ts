@@ -120,7 +120,7 @@ export const createProxyServer = (config: ProxyConfig): http.Server => {
     throw new RangeError('maxBodySize must be a positive safe integer');
   }
 
-  return http.createServer(async (request, response) => {
+  const server = http.createServer(async (request, response) => {
     if (wasRequestHandled(request, response, isEnableCors)) {
       return;
     }
@@ -142,7 +142,7 @@ export const createProxyServer = (config: ProxyConfig): http.Server => {
         return;
       }
 
-      if (!parsed.query || typeof parsed.query !== 'string') {
+      if (!parsed || typeof parsed.query !== 'string' || !parsed.query) {
         response.writeHead(400, { 'Content-Type': 'application/json' });
         response.end(JSON.stringify({ errors: [{ message: 'Missing or invalid query field' }] }));
         return;
@@ -259,6 +259,9 @@ export const createProxyServer = (config: ProxyConfig): http.Server => {
       );
     }
   });
+
+  server.on('close', () => shield.rateLimiter?.destroy());
+  return server;
 };
 
 /**
@@ -274,6 +277,7 @@ const validateWithRules = (
   // Create a minimal context-like object that collects errors
   const mockContext = {
     getFieldDef: () => null,
+    getParentType: () => null,
     getSchema: () => ({
       getMutationType: () => null,
       getQueryType: () => ({ name: 'Query' }),
